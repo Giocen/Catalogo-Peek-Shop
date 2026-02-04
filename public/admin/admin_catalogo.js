@@ -153,6 +153,13 @@ function renderCardsPresentaciones() {
         <b>${p.margen || 0}%</b>
       </div>
 
+      <div class="text-xs text-gray-600">
+        Ganancia:
+        <b>$${(Number(p.precio) - Number(p.costo)) || 0}</b> |
+        Margen:
+        <b>${p.margen || 0}%</b>
+      </div>
+
       <div class="grid grid-cols-2 gap-2">
         <input type="number" class="input"
           value="${p.stock}"

@@ -8,12 +8,15 @@ const cont = document.getElementById("producto");
 const relacionadosDiv = document.getElementById("relacionados");
 const sticky = document.getElementById("stickyBuy");
 
+let presentacionSeleccionada = null;
+let productoActual = null;
+let imagenPrincipal = null;
+
 /* =========================================================
    CARGAR PRODUCTO
 ========================================================= */
 async function cargarProducto() {
 
-  /* ===== PRODUCTO ===== */
   const { data: p, error } = await supabase
     .from("catalogo_productos")
     .select(`
@@ -32,7 +35,8 @@ async function cargarProducto() {
     return;
   }
 
-  /* ===== PRESENTACIONES (SOLO LECTURA) ===== */
+  productoActual = p;
+
   const { data: presentaciones } = await supabase
     .from("catalogo_presentaciones")
     .select(`
@@ -42,6 +46,10 @@ async function cargarProducto() {
       cantidad,
       talla,
       precio,
+      precio_oferta,
+      en_oferta,
+      stock,
+      sku,
       activo
     `)
     .eq("producto_id", p.id)
@@ -51,178 +59,255 @@ async function cargarProducto() {
   const imgs =
     p.catalogo_multimedia?.map(m => m.url) || ["/img/placeholder.png"];
 
-  const envioGratis = p.precio >= 500;
+  imagenPrincipal = imgs[0];
 
   cont.innerHTML = `
-<!-- ================= BREADCRUMB ================= -->
 <div class="col-span-full mb-4">
   <div class="text-sm text-blue-600">
-    <a href="/" class="hover:underline font-medium">
-      ← Volver al listado
-    </a>
-    <span class="text-gray-400 mx-2">›</span>
-    <span class="text-gray-500">
-      ${p.categoria || "Productos"}
-    </span>
+    <a href="/" class="hover:underline font-medium">← Volver al listado</a>
+    <span class="mx-2 text-gray-400">›</span>
+    <span class="text-gray-500">${p.categoria || "Productos"}</span>
   </div>
 </div>
 
-<!-- ================= GALERÍA ================= -->
+<!-- GALERÍA -->
 <div class="flex gap-4">
-
   <div class="flex flex-col gap-2">
     ${imgs.map(i => `
-      <img
-        src="${i}"
-        onclick="window._cambiarImg('${i}')"
-        class="w-14 h-14 object-contain border rounded cursor-pointer
-               hover:border-blue-500 bg-white"
-      >
+      <img src="${i}" onclick="window._cambiarImg('${i}')"
+           class="w-14 h-14 border rounded cursor-pointer hover:border-blue-500">
     `).join("")}
   </div>
 
-  <div
-    id="imgZoomWrap"
-    class="relative bg-white border rounded-lg
-           flex items-center justify-center
-           w-[420px] h-[420px] overflow-hidden"
-  >
-    ${envioGratis ? `
-      <span class="absolute top-3 left-3 bg-green-600 text-white text-xs px-3 py-1 rounded-full">
-        Envío gratis
-      </span>` : ""
-    }
-
-    <img
-      id="imgPrincipal"
-      src="${imgs[0]}"
-      class="max-w-full max-h-full object-contain transition-transform duration-200"
-    >
+  <div id="imgZoomWrap"
+       class="relative bg-white border rounded-lg w-[420px] h-[420px]
+              flex items-center justify-center overflow-hidden">
+    <img id="imgPrincipal" src="${imgs[0]}"
+         class="max-w-full max-h-full object-contain transition-transform">
   </div>
 </div>
 
-<!-- ================= INFO ================= -->
+<!-- INFO -->
 <div class="flex flex-col gap-4">
 
-  <h1 class="text-2xl font-semibold">
-    ${p.nombre}
-  </h1>
+  <h1 class="text-2xl font-semibold">${p.nombre}</h1>
 
-  ${p.categoria ? `
-    <div class="text-sm text-gray-500">
-      Categoría: ${p.categoria}
-    </div>` : ""
-  }
-
-  <!-- PRECIO BASE -->
-  <div>
-    <div class="text-4xl font-light">
-      $${p.precio.toLocaleString("es-MX")}
-      <span class="text-base text-gray-500">MXN</span>
-    </div>
-    <div class="text-xs text-gray-500 mt-1">IVA incluido</div>
+  <div id="precioPrincipal" class="text-4xl font-light">
+    $${p.precio.toLocaleString("es-MX")}
+    <span class="text-base text-gray-500">MXN</span>
   </div>
 
-  <!-- ================= PRESENTACIONES ================= -->
+  <div class="text-xs text-gray-500">
+    IVA incluido
+  </div>
+
+  <!-- PRESENTACIONES -->
   ${
-    presentaciones?.length
-      ? `
-      <div class="mt-3">
-        <div class="text-sm font-semibold mb-2">
-          Presentaciones disponibles
-        </div>
+    presentaciones?.length ? `
+    <div class="mt-4">
+      <div class="text-sm font-semibold mb-2">Presentaciones disponibles</div>
 
-        <div class="space-y-2">
-          ${presentaciones.map(pr => `
-            <div class="flex justify-between items-center
-                        border rounded-lg px-3 py-2 bg-gray-50">
-              <div class="text-sm text-gray-700">
-                ${pr.nombre || ""}
-                ${pr.cantidad ? `${pr.cantidad} ${pr.unidad}` : ""}
-                ${pr.talla ? `· ${pr.talla}` : ""}
-              </div>
+      <div id="listaPresentaciones" class="space-y-3">
+        ${presentaciones.map(pr => {
 
-              <div class="font-semibold text-gray-900">
-                $${Number(pr.precio).toLocaleString("es-MX")}
-              </div>
+          let desc = [];
+          if (pr.cantidad) {
+            desc.push(
+              pr.unidad === "pieza"
+                ? `${pr.cantidad} piezas`
+                : `${pr.cantidad} ${pr.unidad}`
+            );
+          } else desc.push(pr.unidad);
+
+          if (pr.talla) desc.push(`Talla ${pr.talla}`);
+
+          const precioFinal = pr.en_oferta && pr.precio_oferta
+            ? pr.precio_oferta
+            : pr.precio;
+
+          return `
+          <div
+            class="presentacion border rounded-xl p-4
+                   flex justify-between items-center
+                   cursor-pointer hover:border-blue-500"
+            data-id="${pr.id}"
+            data-precio="${precioFinal}"
+            data-nombre="${pr.nombre}"
+            data-desc="${desc.join(" · ")}"
+            data-sku="${pr.sku}"
+          >
+            <div class="text-sm">
+              <div class="font-medium">${pr.nombre}</div>
+              <div class="text-xs text-gray-500">${desc.join(" · ")}</div>
+              <div class="text-[11px] text-gray-400">SKU: ${pr.sku}</div>
             </div>
-          `).join("")}
-        </div>
+
+            <div class="text-right">
+              ${
+                pr.en_oferta && pr.precio_oferta
+                  ? `
+                    <div class="text-xs line-through text-gray-400">
+                      $${Number(pr.precio).toLocaleString("es-MX")}
+                    </div>
+                    <div class="text-lg font-bold text-red-600">
+                      $${Number(pr.precio_oferta).toLocaleString("es-MX")}
+                    </div>
+                  `
+                  : `
+                    <div class="text-lg font-semibold">
+                      $${Number(pr.precio).toLocaleString("es-MX")}
+                    </div>
+                  `
+              }
+            </div>
+          </div>
+          `;
+        }).join("")}
       </div>
-      `
-      : ""
+    </div>
+    ` : ""
   }
 
   <!-- BOTONES -->
   <div class="mt-4 flex flex-col gap-3">
-    <button
-      id="btnComprarAhora"
-      class="bg-blue-600 hover:bg-blue-700
-             text-white py-3 rounded-md font-semibold text-lg">
+    <button id="btnComprarAhora"
+      class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md font-semibold">
       Comprar ahora
     </button>
 
-    <button
-      id="btnAgregar"
-      class="border border-blue-600
-             text-blue-600 py-3 rounded-md
-             font-semibold hover:bg-blue-50">
+    <button id="btnAgregar"
+      class="border border-blue-600 text-blue-600 py-3 rounded-md font-semibold">
       Agregar al carrito
     </button>
-  </div>
-
-  <!-- BENEFICIOS -->
-  <div class="mt-6 text-sm text-gray-600 space-y-2">
-    <div>🚚 Envíos a todo México</div>
-    <div>🛡️ Compra protegida</div>
-    <div>📦 Producto original</div>
-  </div>
-</div>
-
-<!-- ================= DESCRIPCIÓN ================= -->
-<div class="col-span-full mt-10 border-t pt-6">
-  <h2 class="font-semibold mb-2 text-lg">Descripción</h2>
-  <div class="text-sm text-gray-700 leading-relaxed">
-    ${p.descripcion || "Sin descripción"}
   </div>
 </div>
 `;
 
-  /* ===== CARRITO (SIN CAMBIOS) ===== */
-  const agregarFn = () =>
-    agregarAlCarrito({
-      id: p.id,
-      nombre: p.nombre,
-      precio: p.precio,
-      imagen: imgs[0]
-    });
-
-  document.getElementById("btnAgregar").onclick = agregarFn;
-
-  document.getElementById("btnComprarAhora").onclick = () => {
-    Swal.fire({
-      title: "¿Cómo deseas recibir tu pedido?",
-      icon: "question",
-      showDenyButton: true,
-      showCancelButton: true,
-      confirmButtonText: "🚚 Envío a domicilio",
-      denyButtonText: "🏪 Recoger en tienda",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: "#16a34a",
-      denyButtonColor: "#2563eb"
-    }).then(r => {
-      if (r.isConfirmed) pedirDatosProducto("envio");
-      else if (r.isDenied) pedirDatosProducto("tienda");
-    });
-  };
-
-  if (document.getElementById("btnStickyAgregar")) {
-    document.getElementById("btnStickyAgregar").onclick = agregarFn;
-    sticky.classList.remove("hidden");
-  }
-
+  activarSeleccionPresentacion();
   activarZoom();
   cargarRelacionados(p.categoria, p.id);
+
+  document.getElementById("btnAgregar").onclick = agregarSeleccionado;
+  document.getElementById("btnComprarAhora").onclick = comprarAhora;
+}
+
+/* =========================================================
+   PRESENTACIONES
+========================================================= */
+function activarSeleccionPresentacion() {
+  document.querySelectorAll(".presentacion").forEach(card => {
+    card.addEventListener("click", () => {
+
+      document.querySelectorAll(".presentacion")
+        .forEach(p => p.classList.remove("ring-2", "ring-blue-500"));
+
+      card.classList.add("ring-2", "ring-blue-500");
+
+      presentacionSeleccionada = {
+        id: card.dataset.id,
+        nombre: card.dataset.nombre,
+        descripcion: card.dataset.desc,
+        precio: Number(card.dataset.precio),
+        sku: card.dataset.sku
+      };
+
+      document.getElementById("precioPrincipal").innerHTML = `
+        $${presentacionSeleccionada.precio.toLocaleString("es-MX")}
+        <span class="text-base text-gray-500">MXN</span>
+      `;
+    });
+  });
+}
+
+/* =========================================================
+   CARRITO
+========================================================= */
+function agregarSeleccionado() {
+  const item = presentacionSeleccionada
+    ? {
+        id: presentacionSeleccionada.id,
+        nombre: `${productoActual.nombre} · ${presentacionSeleccionada.nombre}`,
+        precio: presentacionSeleccionada.precio,
+        imagen: imagenPrincipal
+      }
+    : {
+        id: productoActual.id,
+        nombre: productoActual.nombre,
+        precio: productoActual.precio,
+        imagen: imagenPrincipal
+      };
+
+  agregarAlCarrito(item);
+}
+
+/* =========================================================
+   COMPRAR AHORA
+========================================================= */
+function comprarAhora() {
+  Swal.fire({
+    title: "¿Cómo deseas recibir tu pedido?",
+    showDenyButton: true,
+    confirmButtonText: "🚚 Envío",
+    denyButtonText: "🏪 Tienda"
+  }).then(r => {
+    if (r.isConfirmed) pedirDatosProducto("envio");
+    else if (r.isDenied) pedirDatosProducto("tienda");
+  });
+}
+
+/* =========================================================
+   WHATSAPP
+========================================================= */
+function pedirDatosProducto(tipo) {
+  Swal.fire({
+    title: "Datos para tu pedido",
+    html: `
+      <input id="swal-nombre" class="swal2-input" placeholder="Nombre completo">
+      ${tipo === "envio"
+        ? `<textarea id="swal-direccion" class="swal2-textarea" placeholder="Dirección"></textarea>`
+        : ""}
+    `,
+    confirmButtonText: "Enviar pedido",
+    preConfirm: () => {
+      const nombre = document.getElementById("swal-nombre").value.trim();
+      const direccion =
+        tipo === "envio"
+          ? document.getElementById("swal-direccion").value.trim()
+          : "";
+
+      if (!nombre || (tipo === "envio" && !direccion)) {
+        Swal.showValidationMessage("Completa los datos");
+        return false;
+      }
+
+      return { nombre, direccion, tipo };
+    }
+  }).then(r => {
+    if (!r.isConfirmed) return;
+
+    let msg = `PEDIDO PEEKSHOP\n\n`;
+    msg += `Producto: ${productoActual.nombre}\n`;
+
+    if (presentacionSeleccionada) {
+      msg += `Presentación: ${presentacionSeleccionada.nombre}\n`;
+      msg += `Detalles: ${presentacionSeleccionada.descripcion}\n`;
+      msg += `Precio: $${presentacionSeleccionada.precio}\n`;
+    } else {
+      msg += `Precio: $${productoActual.precio}\n`;
+    }
+
+    msg += `Cliente: ${r.value.nombre}\n`;
+    if (r.value.tipo === "envio") {
+      msg += `Entrega: Envío\nDirección: ${r.value.direccion}\n`;
+    } else {
+      msg += `Entrega: Recoger en tienda\n`;
+    }
+
+    window.open(
+      `https://wa.me/529992328261?text=${encodeURIComponent(msg)}`,
+      "_blank"
+    );
+  });
 }
 
 /* =========================================================
@@ -233,27 +318,22 @@ function activarZoom() {
   const img = document.getElementById("imgPrincipal");
   if (!wrap || !img) return;
 
-  if (window.matchMedia("(hover: hover)").matches) {
-    wrap.addEventListener("mousemove", e => {
-      const r = wrap.getBoundingClientRect();
-      const x = ((e.clientX - r.left) / r.width) * 100;
-      const y = ((e.clientY - r.top) / r.height) * 100;
-      img.style.transformOrigin = `${x}% ${y}%`;
-      img.style.transform = "scale(1.8)";
-    });
+  wrap.addEventListener("mousemove", e => {
+    const r = wrap.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    img.style.transformOrigin = `${x}% ${y}%`;
+    img.style.transform = "scale(1.8)";
+  });
 
-    wrap.addEventListener("mouseleave", () => {
-      img.style.transform = "scale(1)";
-      img.style.transformOrigin = "center";
-    });
-  }
+  wrap.addEventListener("mouseleave", () => {
+    img.style.transform = "scale(1)";
+  });
 }
 
-/* CAMBIAR IMAGEN */
+/* CAMBIAR IMG */
 window._cambiarImg = src => {
-  const img = document.getElementById("imgPrincipal");
-  img.src = src;
-  img.style.transform = "scale(1)";
+  document.getElementById("imgPrincipal").src = src;
 };
 
 /* =========================================================
@@ -272,79 +352,16 @@ async function cargarRelacionados(categoria, actualId) {
   relacionadosDiv.innerHTML = (data || []).map(p => {
     const img = p.catalogo_multimedia?.[0]?.url || "/img/placeholder.png";
     return `
-      <div class="bg-white rounded-lg shadow hover:shadow-lg transition">
+      <a href="/producto.html?id=${p.id}"
+         class="block bg-white rounded-xl shadow hover:shadow-lg">
         <img src="${img}" class="h-40 w-full object-contain p-3">
         <div class="p-3">
-          <div class="text-sm line-clamp-2">${p.nombre}</div>
+          <div class="text-sm">${p.nombre}</div>
           <div class="font-bold mt-1">$${p.precio}</div>
-          <a href="/producto.html?id=${p.id}"
-             class="text-green-600 text-sm mt-2 inline-block">
-            Ver producto
-          </a>
         </div>
-      </div>
+      </a>
     `;
   }).join("");
-}
-
-/* =========================================================
-   PEDIDO DIRECTO
-========================================================= */
-function pedirDatosProducto(tipo) {
-  Swal.fire({
-    title: "Datos para tu pedido",
-    html: `
-      <input id="swal-nombre" class="swal2-input" placeholder="Nombre completo">
-      ${tipo === "envio"
-        ? `<textarea id="swal-direccion" class="swal2-textarea"
-            placeholder="Dirección completa"></textarea>`
-        : ""}
-      <textarea id="swal-ref" class="swal2-textarea"
-        placeholder="Referencia (opcional)"></textarea>
-    `,
-    confirmButtonText: "Enviar pedido",
-    showCancelButton: true,
-    confirmButtonColor: "#16a34a",
-    preConfirm: () => {
-      const nombre = document.getElementById("swal-nombre").value.trim();
-      const direccion =
-        tipo === "envio"
-          ? document.getElementById("swal-direccion").value.trim()
-          : "";
-
-      if (!nombre || (tipo === "envio" && !direccion)) {
-        Swal.showValidationMessage("Completa los datos requeridos");
-        return false;
-      }
-      return { nombre, direccion, tipo };
-    }
-  }).then(r => {
-    if (!r.isConfirmed) return;
-    enviarWhatsProductoDirecto(r.value);
-  });
-}
-
-/* =========================================================
-   WHATSAPP
-========================================================= */
-function enviarWhatsProductoDirecto(data) {
-  let msg = `PEDIDO PEEKSHOP\n\n`;
-  msg += `Producto: ${document.querySelector("h1").innerText}\n`;
-  msg += `Cliente: ${data.nombre}\n`;
-
-  if (data.tipo === "envio") {
-    msg += `Entrega: Envío a domicilio\n`;
-    msg += `Dirección: ${data.direccion}\n`;
-  } else {
-    msg += `Entrega: Recoger en tienda\n`;
-  }
-
-  msg += `\nEscríbenos para confirmar tu pedido 🐾`;
-
-  window.open(
-    `https://wa.me/529992328261?text=${encodeURIComponent(msg)}`,
-    "_blank"
-  );
 }
 
 /* INIT */

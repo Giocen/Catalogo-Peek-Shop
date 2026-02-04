@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "catalogo-peek-shop"
-  }
+    "default": "catalogo-peek-shop",
+    "firebase logout": "animal-point-mid"
+  },
+  "targets": {},
+  "etags": {}
 }

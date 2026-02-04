@@ -308,7 +308,8 @@ function crearPresentacionBase() {
     margen: 0,
     stock: 0,
     activo: true,
-    sku: ""
+    sku: "",
+    detalle: ""
   };
 }
 
@@ -347,6 +348,13 @@ function renderPresentaciones() {
           value="${p.nombre}"
           data-index="${i}"
           onchange="actualizarCampoPresentacion(this,'nombre')">
+
+          <input class="input text-sm"
+          placeholder="Detalle corto (opcional) · Ej. Tabletas masticables"
+          value="${p.detalle || ""}"
+          data-index="${i}"
+          onchange="actualizarCampoPresentacion(this,'detalle')">
+
 
 
         <div class="grid grid-cols-2 gap-2">
@@ -458,6 +466,13 @@ function validar() {
   }
 
   for (const p of presentaciones) {
+
+    // 🔹 AQUÍ PEGAS ESTO
+    if (!p.nombre.trim()) {
+      swalWarn("Cada presentación debe tener un nombre");
+      return false;
+    }
+
     if (!p.precio || !p.costo || Number(p.precio) <= Number(p.costo)) {
       swalWarn("Revisa costo y precio en presentaciones");
       return false;
@@ -466,6 +481,7 @@ function validar() {
 
   return true;
 }
+
 
 /* ================= SKU ================= */
 function generarSKU(p) {
@@ -478,7 +494,10 @@ function obtenerPrecioBase() {
   let min = null;
 
   for (const p of presentaciones) {
-    const precio = Number(p.precio);
+    if (!p.activo) continue;
+    const precio = p.en_oferta && p.precio_oferta
+      ? Number(p.precio_oferta)
+      : Number(p.precio);
     if (!precio || precio <= 0) continue;
     if (min === null || precio < min) min = precio;
   }
@@ -619,18 +638,18 @@ btnGuardar.onclick = async () => {
 
       // 🧹 borrar presentaciones anteriores
       
-      if (productoActual && presentaciones.length) {
-        const { error: errDel } = await supabase
-          .from("catalogo_presentaciones")
-          .delete()
-          .eq("producto_id", productoActual);
+      //if (productoActual && presentaciones.length) {
+       // const { error: errDel } = await supabase
+        //  .from("catalogo_presentaciones")
+        //  .delete()
+         // .eq("producto_id", productoActual);
       
-        if (errDel) {
-          swalError("No se pudieron borrar las presentaciones anteriores");
-          console.error(errDel);
-          return; // ⛔ detener guardado
-        }
-      }
+      //  if (errDel) {
+        //  swalError("No se pudieron borrar las presentaciones anteriores");
+        //  console.error(errDel);
+        //  return; // ⛔ detener guardado
+       // }
+     // }
 
       
 
@@ -651,24 +670,56 @@ btnGuardar.onclick = async () => {
       productoId = data.id;
     }
 
+
+// 🔐 Guardar IDs de presentaciones anteriores (solo edición)
+let idsPresentacionesAnteriores = [];
+
+if (productoActual) {
+  const { data } = await supabase
+    .from("catalogo_presentaciones")
+    .select("id")
+    .eq("producto_id", productoActual);
+
+  idsPresentacionesAnteriores = (data || []).map(p => p.id);
+}
+
     /* 📦 GUARDAR PRESENTACIONES */
-    for (const p of presentaciones) {
-      await supabase.from("catalogo_presentaciones").insert({
-        producto_id: productoId,
-        nombre: p.nombre,
-        unidad: p.unidad,
-        cantidad: p.cantidad,
-        talla: p.talla || null,
-        costo: Number(p.costo),
-        precio: Number(p.precio),
-        precio_oferta: p.en_oferta ? Number(p.precio_oferta) : null,
-        en_oferta: p.en_oferta,
-        margen: p.margen,
-        stock: p.stock,
-        activo: p.activo,
-        sku: generarSKU(p)
-      });
-    }
+  for (const p of presentaciones) {
+  const { error } = await supabase
+    .from("catalogo_presentaciones")
+    .insert({
+      producto_id: productoId,
+      nombre: p.nombre,
+      unidad: p.unidad,
+      cantidad: p.cantidad,
+      talla: p.talla || null,
+      costo: Number(p.costo),
+      precio: Number(p.precio),
+      precio_oferta: p.en_oferta ? Number(p.precio_oferta) : null,
+      en_oferta: p.en_oferta,
+      margen: p.margen,
+      stock: p.stock,
+      activo: p.activo,
+      sku: generarSKU(p),
+      detalle: p.detalle || null
+    });
+
+  if (error) {
+    swalError("Error al guardar presentaciones");
+    console.error(error);
+    throw new Error("Validación");
+  }
+}
+
+
+// 🧹 borrar presentaciones anteriores (ahora sí, seguro)
+if (idsPresentacionesAnteriores.length) {
+  await supabase
+    .from("catalogo_presentaciones")
+    .delete()
+    .in("id", idsPresentacionesAnteriores);
+}
+
 
     /* 🖼️ MULTIMEDIA */
     // borrar multimedia previa
@@ -945,7 +996,9 @@ modal.classList.remove("hidden");
     margen: p.margen,
     stock: p.stock,
     activo: p.activo,
-    sku: p.sku
+    sku: p.sku,
+    detalle: p.detalle || ""
+
   }));
 
   renderPresentaciones();
