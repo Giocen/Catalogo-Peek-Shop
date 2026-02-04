@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>PeekShop | Detalle de producto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- SweetAlert -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.7/dist/sweetalert2.all.min.js"></script>
+
+  <!-- Estilos cliente -->
+  <link rel="stylesheet" href="/styles/cliente.css">
+</head>
+
+<body class="bg-gray-100">
+
+<!-- ================= HEADER (MISMO QUE HOME) ================= -->
+<header class="bg-yellow-400 sticky top-0 z-50 shadow">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
+
+    <a href="/" class="flex items-center gap-2 shrink-0">
+      <img
+        src="/img/logo-peekshop.png"
+        alt="PeekShop"
+        class="h-14 object-contain mix-blend-multiply"
+      >
+      <span class="text-xl font-bold tracking-wide text-gray-900">
+        PeekShop
+      </span>
+    </a>
+
+    <div class="flex-1 hidden md:block">
+      <input
+        type="text"
+        placeholder="Buscar productos, marcas y más..."
+        class="w-full rounded-sm px-4 py-2 text-sm
+               focus:outline-none focus:ring-2 focus:ring-yellow-600"
+      >
+    </div>
+  </div>
+</header>
+
+<!-- ================= CONTENIDO ================= -->
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- ================= PRODUCTO ================= -->
+  <section
+    id="producto"
+    class="bg-white rounded-2xl shadow
+           grid grid-cols-1 md:grid-cols-2 gap-8 p-6"
+  >
+    <!-- Aquí renderiza producto.js -->
+  </section>
+
+  <!-- ================= RELACIONADOS ================= -->
+  <section class="mt-12">
+    <h2 class="text-xl font-bold mb-4">
+      Productos relacionados
+    </h2>
+
+    <div
+      id="relacionados"
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+    ></div>
+  </section>
+</main>
+
+<!-- ================= STICKY BUY MOBILE ================= -->
+<div
+  id="stickyBuy"
+  class="fixed bottom-0 left-0 right-0 bg-white border-t
+         p-3 flex gap-3 md:hidden z-50 hidden"
+>
+  <button
+    id="btnStickyAgregar"
+    class="flex-1 bg-green-600 hover:bg-green-700
+           text-white py-3 rounded-xl font-bold text-lg"
+  >
+    Agregar al carrito
+  </button>
+</div>
+
+<!-- ================= BOTÓN CARRITO ================= -->
+<button
+  id="btnCarrito"
+  class="fixed bottom-5 right-5 bg-green-600 hover:bg-green-700
+         text-white px-5 py-4 rounded-full shadow-xl z-50"
+>
+  🛒 <span id="carritoCount">0</span>
+</button>
+
+<!-- PORTAL CARRITO -->
+<div id="cart-portal"></div>
+
+<!-- ================= JS ================= -->
+<script type="module" src="/js/carrito.js"></script>
+<script type="module" src="/js/producto.js"></script>
+
+</body>
+</html>

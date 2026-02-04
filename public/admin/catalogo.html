@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>PeekShop | Catálogo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="../styles/catalogo.css">
+
+  <!-- Tooltips -->
+  <link rel="stylesheet" href="../styles/tooltips.css">
+</head>
+
+<body class="hidden bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen p-6">
+
+<!-- HEADER -->
+<header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">
+      📦 Catálogo PeekShop
+    </h1>
+    <p class="text-sm text-slate-500">
+      Administración de productos, precios y multimedia
+    </p>
+  </div>
+
+  <div class="flex gap-2 flex-wrap">
+    <button id="btnNuevo" class="btn-primary">
+      ➕ Nuevo producto
+    </button>
+  
+    <a href="/admin/admin_catalogo.html" class="btn-soft">
+      🛠️ Catálogo
+    </a>
+  
+    <a
+      href="/admin/banners.html"
+      class="btn-soft flex items-center gap-1"
+    >
+      🎯 Banners / Ofertas
+    </a>
+  </div>  
+</header>
+
+<div class="mb-3 flex justify-between items-center">
+  <input
+    id="buscador"
+    type="text"
+    placeholder="🔍 Buscar por código, nombre o categoría"
+    class="input max-w-sm"
+  >
+</div>
+
+
+<!-- LISTADO -->
+<section class="max-w-7xl mx-auto bg-white rounded-xl shadow overflow-hidden max-h-[70vh] overflow-y-auto">
+  <table class="w-full text-sm table-fixed">
+    <thead class="bg-slate-100 text-slate-600 select-none">
+      <tr>
+    
+        <th class="px-3 py-2 w-14 text-left">Img</th>
+    
+        <th
+          data-campo="codigo"
+          onclick="ordenarPor('codigo')"
+          class="px-3 py-2 w-36 text-left cursor-pointer hover:text-slate-900"
+        >
+          <div class="flex items-center gap-1">
+            Código
+            <span class="flecha text-xs text-slate-400">⇅</span>
+          </div>
+        </th>
+    
+        <th
+          data-campo="nombre"
+          onclick="ordenarPor('nombre')"
+          class="px-3 py-2 text-left cursor-pointer hover:text-slate-900"
+        >
+          <div class="flex items-center gap-1">
+            Producto
+            <span class="flecha text-xs text-slate-400">⇅</span>
+          </div>
+        </th>
+    
+        <th
+          data-campo="categoria"
+          onclick="ordenarPor('categoria')"
+          class="px-3 py-2 w-40 text-left cursor-pointer hover:text-slate-900"
+        >
+          <div class="flex items-center gap-1">
+            Categoría
+            <span class="flecha text-xs text-slate-400">⇅</span>
+          </div>
+        </th>
+    
+        <th
+          data-campo="precio"
+          onclick="ordenarPor('precio')"
+          class="px-3 py-2 w-28 text-right cursor-pointer hover:text-slate-900"
+        >
+          <div class="flex items-center justify-end gap-1">
+            Precio
+            <span class="flecha text-xs text-slate-400">⇅</span>
+          </div>
+        </th>
+    
+        <th
+          data-campo="activo"
+          onclick="ordenarPor('activo')"
+          class="px-3 py-2 w-24 text-center cursor-pointer hover:text-slate-900"
+        >
+          <div class="flex items-center justify-center gap-1">
+            Estado
+            <span class="flecha text-xs text-slate-400">⇅</span>
+          </div>
+        </th>
+    
+        <th class="px-3 py-2 w-20 text-center">
+          Acciones
+        </th>
+    
+      </tr>
+    </thead>
+    
+    <tbody id="lista"></tbody>
+  </table>
+</section>
+<!-- MODAL PRODUCTO -->
+<div
+  id="modal"
+  class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+>
+  <div
+    class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl p-6"
+  >
+
+    <!-- TÍTULO -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="tituloModal" class="text-xl font-bold text-slate-800">
+        🧾 Nuevo producto
+      </h2>
+      <button onclick="cerrar()" class="text-slate-400 hover:text-red-500">
+        ✕
+      </button>
+    </div>
+
+    <!-- DATOS GENERALES -->
+    <div class="space-y-3">
+      <div>
+        <label class="label flex items-center gap-1">
+          Nombre *
+          <span class="tooltip">ⓘ
+            <span class="tooltip-box">
+              Nombre principal del producto que se mostrará en el catálogo.
+            </span>
+          </span>
+        </label>
+        <input id="nombre" class="input">
+      </div>
+
+      <div>
+        <label class="label flex items-center gap-1">
+          Código del producto
+          <span class="tooltip">ⓘ
+            <span class="tooltip-box">
+              Código interno o SKU principal del producto
+            </span>
+          </span>
+        </label>
+        <input id="codigo" class="input" placeholder="Ej. DOG-001">
+      </div>
+      
+
+      <div>
+        <label class="label flex items-center gap-1">
+          Descripción
+          <span class="tooltip">ⓘ
+            <span class="tooltip-box">
+              Descripción interna o visible del producto (opcional).
+            </span>
+          </span>
+        </label>
+        <textarea id="descripcion" rows="3" class="input"></textarea>
+      </div>
+    </div>
+
+    <!-- CATEGORÍA -->
+    <div class="mt-4">
+      <label class="label flex items-center gap-1">
+        📂 Categoría
+        <span class="tooltip">ⓘ
+          <span class="tooltip-box">
+            Puedes elegir una categoría existente o escribir una nueva.
+          </span>
+        </span>
+      </label>
+
+      <div class="grid grid-cols-2 gap-2">
+        <select id="categoria" class="input">
+          <option value="">Selecciona</option>
+          <option>Alimentos</option>
+          <option>Accesorios</option>
+          <option>Juguetes</option>
+          <option>Higiene</option>
+          <option>Salud</option>
+        </select>
+
+        <input
+          id="categoriaNueva"
+          class="input"
+          placeholder="Nueva categoría"
+        >
+      </div>
+    </div>
+
+    <!-- ESTADO -->
+    <div class="flex gap-6 mt-4">
+      <label class="checkbox flex items-center gap-2 tooltip">
+        <input type="checkbox" id="es_oferta">
+        Producto en oferta
+        <span class="tooltip-box">
+          🔥 Marca el producto como OFERTA.
+          El precio se toma desde las presentaciones.
+        </span>
+      </label>
+
+      <label class="checkbox flex items-center gap-2 tooltip">
+        <input type="checkbox" id="activo" checked>
+        Activo
+        <span class="tooltip-box">
+          Si está desactivado, no se mostrará en el catálogo.
+        </span>
+      </label>
+    </div>
+
+    <!-- NOTAS -->
+    <div class="mt-4">
+      <label class="label flex items-center gap-1">
+        📝 Notas internas
+        <span class="tooltip">ⓘ
+          <span class="tooltip-box">
+            Notas solo para administración (no visibles al cliente).
+          </span>
+        </span>
+      </label>
+      <textarea id="notas" rows="2" class="input"></textarea>
+    </div>
+
+    <!-- PRESENTACIONES -->
+    <hr class="divider">
+
+    <h3 class="section-title flex items-center gap-1">
+      🏷️ Presentaciones / Opciones de venta
+      <span class="tooltip">ⓘ
+        <span class="tooltip-box">
+          Cada presentación es una forma de vender el producto:
+          tamaño, peso, precio, oferta y stock independientes.
+        </span>
+      </span>
+    </h3>
+    
+
+    <p class="section-desc">
+      Cada presentación tiene costo, precio, margen y oferta
+    </p>
+
+    <div id="presentaciones" class="space-y-4 mt-4"></div>
+
+    <button id="btnAgregarPresentacion" class="btn-soft mt-2">
+      ➕ Agregar presentación
+    </button>
+
+    <!-- COLORES -->
+    <hr class="divider">
+
+    <h3 class="section-title flex items-center gap-1">
+      🎨 Colores
+      <span class="tooltip">ⓘ
+        <span class="tooltip-box">
+          Colores disponibles del producto (opcional).
+        </span>
+      </span>
+    </h3>
+
+    <div id="colorPicker" class="flex gap-3 mt-2"></div>
+
+    <div class="flex gap-3 mt-3">
+      <input
+        id="colorLibre"
+        type="color"
+        class="w-12 h-10 rounded border"
+      >
+      <button id="btnAgregarColorLibre" class="btn-soft">
+        ➕ Color libre
+      </button>
+    </div>
+
+    <label class="label mt-4 block flex items-center gap-1">
+      📦 Stock por color
+      <span class="tooltip">ⓘ
+        <span class="tooltip-box">
+          Cantidad disponible por cada color seleccionado.
+        </span>
+      </span>
+    </label>
+
+    <div id="stockPorColor" class="space-y-2 mt-2"></div>
+
+    <!-- MEDIA -->
+    <hr class="divider">
+
+    <h3 class="section-title flex items-center gap-1">
+      🖼️ Imágenes / 🎥 Videos
+      <span class="tooltip">ⓘ
+        <span class="tooltip-box">
+          La primera imagen marcada será la principal del producto.
+        </span>
+      </span>
+    </h3>
+
+    <div
+      id="dropZone"
+      tabindex="0"
+      class="drop-zone"
+    >
+      📋 Pega imágenes o videos (Ctrl + V)
+    </div>
+
+    <input
+      id="fileInputMedia"
+      type="file"
+      accept="image/*,video/*"
+      multiple
+      class="hidden"
+    >
+
+    <button
+      id="btnAdjuntarMedia"
+      type="button"
+      class="btn-soft w-full mt-2"
+    >
+      📁 Adjuntar imágenes o videos
+    </button>
+
+    <div
+      id="mediaLista"
+      class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4"
+    ></div>
+
+    <!-- ACCIONES -->
+    <div class="flex justify-end gap-2 mt-6">
+      <button onclick="cerrar()" class="btn-outline">
+        Cancelar
+      </button>
+      <button id="btnGuardar" class="btn-success">
+        Guardar producto
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script type="module" src="catalogo.js"></script>
+</body>
+</html>

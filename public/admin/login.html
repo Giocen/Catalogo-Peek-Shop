@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>PeekShop Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-fuchsia-600">
+
+  <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl p-6">
+    
+    <h2 class="text-2xl font-bold text-center mb-1">
+      🔐 PeekShop
+    </h2>
+    <p class="text-center text-gray-500 mb-6">
+      Panel de administración
+    </p>
+
+    <!-- EMAIL -->
+    <div class="mb-4">
+      <label class="text-sm font-semibold text-gray-600">Correo</label>
+      <input
+        id="email"
+        type="email"
+        placeholder="correo@ejemplo.com"
+        class="mt-1 w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+      >
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="mb-4">
+      <label class="text-sm font-semibold text-gray-600">Contraseña</label>
+
+      <div class="relative mt-1">
+        <input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          class="w-full border rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        >
+
+        <!-- OJO -->
+        <button
+          type="button"
+          id="togglePassword"
+          class="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-purple-600"
+        >
+          <!-- SVG OJO -->
+          <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5
+              c4.478 0 8.268 2.943 9.542 7
+              -1.274 4.057-5.064 7-9.542 7
+              -4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+
+          <svg id="eyeClosed" xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 hidden" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13.875 18.825A10.05 10.05 0 0112 19
+              c-4.478 0-8.268-2.943-9.542-7
+              a9.956 9.956 0 012.042-3.368M6.223 6.223
+              A9.956 9.956 0 0112 5
+              c4.478 0 8.268 2.943 9.542 7
+              a9.97 9.97 0 01-4.293 5.293M15 12
+              a3 3 0 00-3-3M3 3l18 18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTÓN -->
+    <button
+      id="btnLogin"
+      class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-semibold transition"
+    >
+      Entrar
+    </button>
+
+    <!-- ERROR -->
+    <p id="error" class="text-red-600 text-sm mt-3 text-center"></p>
+  </div>
+
+  <!-- JS -->
+  <script type="module" src="login.js"></script>
+</body>
+</html>

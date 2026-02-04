@@ -1,0 +1,169 @@
+/* Inputs */
+.input {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+  .input:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 1px #8b5cf6;
+  }
+  
+  /* Labels */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  /* Botones */
+  .btn-primary {
+    background: linear-gradient(135deg,#8b5cf6,#6366f1);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+  }
+  .btn-primary:hover { opacity: .9 }
+  
+  .btn-soft {
+    background: #f1f5f9;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+  }
+  
+  .btn-outline {
+    border: 1px solid #cbd5f5;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+  }
+  
+  .btn-success {
+    background: #16a34a;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+  }
+  
+  /* Checkbox */
+  .checkbox {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    font-size: .85rem;
+  }
+  
+  /* Secciones */
+  .divider {
+    margin: 1.5rem 0;
+    border-top: 1px dashed #e5e7eb;
+  }
+  
+  .section-title {
+    font-weight: 700;
+    color: #1e293b;
+  }
+  
+  .section-desc {
+    font-size: .75rem;
+    color: #64748b;
+  }
+  
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed #a78bfa;
+    padding: 1rem;
+    text-align: center;
+    border-radius: 1rem;
+    cursor: pointer;
+    background: #fafafa;
+  }
+  .drop-zone:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #a78bfa;
+  }
+  
+  .btn-adjuntar {
+    background-color: #f1f5f9; /* slate-100 */
+    transition: background-color 0.15s ease, transform 0.05s ease;
+  }
+  
+  .btn-adjuntar:active {
+    background-color: #e0e7ff; /* indigo-100 */
+    transform: scale(0.98);
+  }
+  
+  /* =====================
+   EFECTO HOVER GLOBAL
+===================== */
+button,
+.btn-primary,
+.btn-soft,
+.btn-outline,
+.btn-success {
+  transition: all 0.2s ease;
+}
+
+button:hover,
+.btn-primary:hover,
+.btn-soft:hover,
+.btn-outline:hover,
+.btn-success:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.btn-soft:hover {
+  background-color: #e2e8f0; /* slate-200 */
+}
+
+.btn-outline:hover {
+  background-color: #eef2ff; /* indigo-50 */
+  border-color: #6366f1;
+}
+
+.btn-success:hover {
+  background-color: #15803d;
+}
+
+
+button:active {
+  transform: scale(0.97);
+}
+
+
+.input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+.input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 1px #8b5cf6;
+}
+
+th .flecha {
+  margin-left: 4px;
+  opacity: 0.3;
+  font-size: 0.75rem;
+}
+
+th.activo {
+  color: #0f172a; /* slate-900 */
+  font-weight: 600;
+}
+
+th.activo .flecha {
+  opacity: 1;
+}
