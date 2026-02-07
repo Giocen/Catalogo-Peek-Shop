@@ -47,7 +47,12 @@ btnLogin.addEventListener("click", async () => {
     console.log("✅ Login Firebase OK");
 
     // 🚀 ENTRAR DIRECTO AL ADMIN
-    window.location.replace("catalogo.html");
+   // 🔑 Marcar sesión como admin
+sessionStorage.setItem("modo_admin", "1");
+
+// 🚀 ENTRAR DIRECTO AL ADMIN
+window.location.replace("catalogo.html");
+    
 
   } catch (e) {
     console.error("❌ Error Login:", e);
