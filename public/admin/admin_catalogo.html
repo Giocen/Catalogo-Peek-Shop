@@ -19,8 +19,10 @@
 
 <!-- ================= HEADER ================= -->
 <header class="bg-yellow-400 sticky top-0 z-50 shadow">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
+  <div class="max-w-7xl mx-auto px-4 py-3
+              flex items-center gap-4">
 
+    <!-- LOGO -->
     <a href="/" class="flex items-center gap-2 shrink-0">
       <img
         src="/img/logo-peekshop.png"
@@ -32,6 +34,7 @@
       </span>
     </a>
 
+    <!-- BUSCADOR (solo desktop) -->
     <div class="flex-1 hidden md:block">
       <input
         type="text"
@@ -40,6 +43,18 @@
                focus:outline-none focus:ring-2 focus:ring-yellow-600"
       >
     </div>
+
+    <!-- 🔑 BOTÓN MODO ADMIN (desktop + mobile) -->
+    <button
+      id="btnModoAdmin"
+      class="hidden bg-blue-600 hover:bg-blue-700
+             text-white px-4 py-2 rounded-lg
+             text-sm font-semibold shadow
+             whitespace-nowrap"
+    >
+      🛠️ Editar
+    </button>
+
   </div>
 </header>
 
@@ -99,19 +114,41 @@
 <script type="module" src="/js/carrito.js"></script>
 <script type="module" src="/js/producto.js"></script>
 
-<!-- ================= ADMIN (CONDICIONAL) ================= -->
+<!-- ================= ADMIN (BOTÓN + MODO EDICIÓN) ================= -->
 <script type="module">
+  import { auth } from "/js/firebase.js";
+  import { onAuthStateChanged } from
+    "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+  const btn = document.getElementById("btnModoAdmin");
   const MODO_ADMIN = localStorage.getItem("modo_admin") === "1";
 
+  // 🔐 Mostrar botón SOLO si hay sesión
+  onAuthStateChanged(auth, user => {
+    if (!user || !btn) return;
+
+    btn.classList.remove("hidden");
+    btn.textContent = MODO_ADMIN
+      ? "👁️ Ver cliente"
+      : "🛠️ Editar";
+
+    btn.onclick = () => {
+      localStorage.setItem(
+        "modo_admin",
+        MODO_ADMIN ? "0" : "1"
+      );
+      location.reload();
+    };
+  });
+
+  // 🔑 Cargar JS admin solo si está activo
   if (MODO_ADMIN) {
     import("/js/admin_producto_bloques.js");
 
-    // 🔄 Recargar bloques cuando el admin guarda
-    document.addEventListener("producto-bloques-actualizados", () => {
-      console.log("🔄 Bloques de producto actualizados");
-      // Recarga completa del producto para mantener coherencia
-      location.reload();
-    });
+    document.addEventListener(
+      "producto-bloques-actualizados",
+      () => location.reload()
+    );
   }
 </script>
 

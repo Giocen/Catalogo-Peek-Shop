@@ -1,17 +1,15 @@
 import { auth } from "../js/firebase.js";
 import {
-  signInWithEmailAndPassword,
-  setPersistence,
-  browserLocalPersistence
+  signInWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-/* ------------------ DOM ------------------ */
+/* ================= DOM ================= */
 const btnLogin = document.getElementById("btnLogin");
 const error = document.getElementById("error");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 
-/* ------------------ OJO ------------------ */
+/* ================= OJO PASSWORD ================= */
 const togglePassword = document.getElementById("togglePassword");
 const eyeOpen = document.getElementById("eyeOpen");
 const eyeClosed = document.getElementById("eyeClosed");
@@ -23,7 +21,7 @@ togglePassword.addEventListener("click", () => {
   eyeClosed.classList.toggle("hidden", visible);
 });
 
-/* ------------------ LOGIN ------------------ */
+/* ================= LOGIN ================= */
 btnLogin.addEventListener("click", async () => {
   error.textContent = "";
 
@@ -36,26 +34,28 @@ btnLogin.addEventListener("click", async () => {
   }
 
   try {
-    console.log("🔐 Intentando login:", email);
+    btnLogin.disabled = true;
+    btnLogin.textContent = "Entrando...";
 
-    // 🔒 Persistencia Firebase
-    await setPersistence(auth, browserLocalPersistence);
+    // 🔐 Login Firebase (rápido)
+    const cred = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
 
-    // 🔐 Login Firebase
-    await signInWithEmailAndPassword(auth, email, password);
+    if (!cred.user) {
+      throw new Error("Login incompleto");
+    }
 
-    console.log("✅ Login Firebase OK");
+    // 🔑 Activar modo admin (consistente en todo el sistema)
+    localStorage.setItem("modo_admin", "1");
 
-    // 🚀 ENTRAR DIRECTO AL ADMIN
-   // 🔑 Marcar sesión como admin
-sessionStorage.setItem("modo_admin", "1");
-
-// 🚀 ENTRAR DIRECTO AL ADMIN
-window.location.replace("catalogo.html");
-    
+    // 🚀 Ir directo al catálogo admin
+    window.location.href = "catalogo.html";
 
   } catch (e) {
-    console.error("❌ Error Login:", e);
+    console.error("❌ Login error:", e);
 
     switch (e.code) {
       case "auth/user-not-found":
@@ -73,5 +73,8 @@ window.location.replace("catalogo.html");
       default:
         error.textContent = "No se pudo iniciar sesión";
     }
+  } finally {
+    btnLogin.disabled = false;
+    btnLogin.textContent = "Entrar";
   }
 });
