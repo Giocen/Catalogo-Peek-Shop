@@ -378,17 +378,32 @@ function abrirModalLayout() {
     html: `
       <div class="space-y-3 text-left">
 
+        <label class="font-semibold text-sm">Zona</label>
+            <select id="lZona" class="w-full border rounded p-2">
+            <option value="left">Izquierda</option>
+            <option value="right">Derecha</option>
+            <option value="full">Ancho completo</option>
+            </select>
+
+
         <label class="font-semibold text-sm">Tipo de bloque</label>
         <select id="lTipo" class="w-full border rounded p-2">
-          <option value="image">Imagen producto</option>
-          <option value="price">Precio</option>
-          <option value="offer">Oferta</option>
-          <option value="presentations">Presentaciones</option>
-          <option value="description">Descripción</option>
-          <option value="text">Texto libre</option>
-          <option value="image_ad">Imagen publicitaria</option>
-          <option value="video_ad">Video publicitario</option>
+        <option value="image">Imagen producto</option>
+        <option value="name">Nombre del producto</option>
+        <option value="brand">Marca</option>
+        <option value="category">Categoría</option>
+        <option value="price">Precio</option>
+        <option value="offer">Oferta</option>
+        <option value="short_description">Detalle corto</option>
+        <option value="presentations">Presentaciones</option>
+        <option value="variant">Unidad / Variante</option>
+        <option value="color">Color</option>
+        <option value="description">Descripción</option>
+        <option value="text">Texto libre</option>
+        <option value="image_ad">Imagen publicitaria</option>
+        <option value="video_ad">Video publicitario</option>
         </select>
+
 
         <label class="font-semibold text-sm">Columnas (1–4)</label>
         <input id="lCols" type="number" min="1" max="4"
@@ -404,17 +419,20 @@ function abrirModalLayout() {
     showCancelButton: true,
     confirmButtonText: "Agregar",
     preConfirm: () => ({
-      componente: document.getElementById("lTipo").value,
-      columnas: Number(document.getElementById("lCols").value),
-      contenido: document.getElementById("lContent").value.trim()
+    componente: document.getElementById("lTipo").value,
+    columnas: Number(document.getElementById("lCols").value),
+    zona: document.getElementById("lZona").value,
+    contenido: document.getElementById("lContent").value.trim()
     })
+
   }).then(res => {
     if (!res.isConfirmed) return;
     guardarBloqueLayout(res.value);
   });
 }
 
-async function guardarBloqueLayout({ componente, columnas, contenido }) {
+async function guardarBloqueLayout({ componente, columnas, zona, contenido }) {
+
 
   const { data: ultimo } = await supabase
     .from("catalogo_layout_producto")
@@ -428,6 +446,7 @@ async function guardarBloqueLayout({ componente, columnas, contenido }) {
   const payload = {
     componente,
     columnas,
+    zona,
     orden,
     activo: true,
     config: {}

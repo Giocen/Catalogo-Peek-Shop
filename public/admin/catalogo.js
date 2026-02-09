@@ -55,6 +55,7 @@ const btnGuardar = document.getElementById("btnGuardar");
 const dropZone = document.getElementById("dropZone");
 const fileInputMedia = document.getElementById("fileInputMedia");
 const btnAdjuntarMedia = document.getElementById("btnAdjuntarMedia");
+const marca = document.getElementById("marca");
 
 /* 🔐 PROTECCIÓN */
 let authChecked = false;
@@ -610,18 +611,19 @@ if (btnGuardar) btnGuardar.onclick = async () => {
           }
           
       
-      const payload = {
-        codigo: codigo.value.trim() || null,
-        nombre: nombre.value.trim(),
-        descripcion: descripcion.value.trim(),
-        categoria: categoriaNueva.value || categoria.value,
-        precio: Number(precioFinal), 
-        es_oferta: es_oferta.checked,
-        activo: activo.checked,
-        notas: notas.value,
-        colores: colores.map(c => c.nombre)
-      };
-      
+          const payload = {
+            codigo: codigo.value.trim() || null,
+            nombre: nombre.value.trim(),
+            marca: marca.value.trim() || null,
+            descripcion: descripcion.value.trim(),
+            categoria: categoriaNueva.value || categoria.value,
+            precio: Number(precioFinal), 
+            es_oferta: es_oferta.checked,
+            activo: activo.checked,
+            notas: notas.value,
+            colores: colores.map(c => c.nombre)
+          };
+
     
 
     let productoId = productoActual;
@@ -676,9 +678,10 @@ if (btnGuardar) btnGuardar.onclick = async () => {
 // 🧹 BORRAR PRESENTACIONES ANTERIORES (ANTES DE INSERTAR)
 if (productoActual) {
   const { error: errDel } = await supabase
-    .from("catalogo_presentaciones")
-    .delete()
-    .eq("producto_id", productoActual);
+  .from("catalogo_presentaciones")
+  .delete()
+  .eq("producto_id", productoActual)
+  .select();
 
   if (errDel) {
     swalError("No se pudieron borrar las presentaciones anteriores");
@@ -780,10 +783,11 @@ if (btnNuevo) btnNuevo.onclick = () => {
 
   // 🧼 LIMPIAR FORMULARIO (CLAVE)
   nombre.value = "";
-  codigo.value = "";
+  codigo.value = "";  
   codigoDuplicado = false;
   codigo.classList.remove("border-red-500");
   quitarAvisoCodigo();
+  marca.value = "";
   descripcion.value = "";
   categoria.value = "";
   categoriaNueva.value = "";
@@ -915,6 +919,7 @@ window.editarProducto = async (id) => {
     id,
     codigo,
     nombre,
+    marca,
     descripcion,
     categoria,
     precio,
@@ -941,6 +946,7 @@ window.editarProducto = async (id) => {
   codigoDuplicado = false;
   codigo.classList.remove("border-red-500");
   quitarAvisoCodigo();
+  marca.value = producto.marca || "";
   descripcion.value = producto.descripcion || "";
   categoria.value = producto.categoria || "";
   categoriaNueva.value = "";
@@ -1015,6 +1021,7 @@ function renderTabla() {
   let filtrados = productosCache.filter(p =>
     (p.codigo || "").toLowerCase().includes(texto) ||
     (p.nombre || "").toLowerCase().includes(texto) ||
+    (p.marca || "").toLowerCase().includes(texto) ||
     (p.categoria || "").toLowerCase().includes(texto)
   );
 
@@ -1207,5 +1214,35 @@ document
       showConfirmButton: false
     });
   
+
+
+
     cargar(); // 🔄 refrescar lista
   };
+
+  /* ================= CIERRE MODAL (GLOBAL) ================= */
+
+// botones ✕ y Cancelar
+document.querySelectorAll("[data-cerrar]").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.preventDefault();
+    cerrar();
+  });
+});
+
+// click fuera (overlay)
+modal.addEventListener("click", e => {
+  if (e.target === modal) {
+    cerrar();
+  }
+});
+
+// evita cerrar cuando se hace click dentro del contenido
+const modalContent = modal.firstElementChild;
+
+if (modalContent) {
+  modalContent.addEventListener("click", e => {
+    e.stopPropagation();
+  });
+}
+

@@ -95,6 +95,7 @@ async function cargarProducto() {
   .select(`
     id,
     nombre,
+    marca,
     descripcion,
     precio,
     categoria,
@@ -104,6 +105,7 @@ async function cargarProducto() {
     imagen_principal,
     colores
   `)
+
   .eq("id", id)
   .single();
 
@@ -181,23 +183,66 @@ if (!layout.length && window.ES_ADMIN) {
     presentaciones
   };
 
-  cont.innerHTML = `
-    ${renderBreadcrumb(p)}
+ cont.innerHTML = `
+  ${renderBreadcrumb(p)}
 
-    <div class="grid grid-cols-4 gap-4">
-      ${layout.map(b => `
-        <div
-          class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
-          data-layout-id="${b.id}"
-          data-cols="${b.columnas || 4}"
-          style="grid-column: span ${b.columnas || 4}"
-        >
-          ${window.ES_ADMIN ? `<div class="admin-layout-resize"></div>` : ""}
-          ${renderComponente(b, ctx)}
-        </div>
-      `).join("")}
+  <div class="grid grid-cols-12 gap-8">
+
+    <!-- IZQUIERDA (IMAGEN / GALERÍA) -->
+    <div
+      class="col-span-12 md:col-span-7 space-y-4 admin-layout-zone"
+      data-zona="left"
+    >
+      ${layout
+        .filter(b => b.zona === "left")
+        .map(b => `
+          <div
+            class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
+            data-layout-id="${b.id}"
+          >
+            ${renderComponente(b, ctx)}
+          </div>
+        `).join("")}
     </div>
-  `;
+
+    <!-- DERECHA (PRECIO / OFERTA / ENVÍO) -->
+    <div
+      class="col-span-12 md:col-span-5 space-y-4 admin-layout-zone"
+      data-zona="right"
+    >
+      ${layout
+        .filter(b => b.zona === "right")
+        .map(b => `
+          <div
+            class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
+            data-layout-id="${b.id}"
+          >
+            ${renderComponente(b, ctx)}
+          </div>
+        `).join("")}
+    </div>
+
+    <!-- FULL WIDTH (DESCRIPCIÓN / TABS / INFO EXTRA) -->
+    <div
+      class="col-span-12 space-y-4 admin-layout-zone"
+      data-zona="full"
+    >
+      ${layout
+        .filter(b => b.zona === "full")
+        .map(b => `
+          <div
+            class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
+            data-layout-id="${b.id}"
+          >
+            ${renderComponente(b, ctx)}
+          </div>
+        `).join("")}
+    </div>
+
+  </div>
+`;
+
+
 
   activarZoom();
   activarBotones(p, imgs[0]);
@@ -424,9 +469,38 @@ function renderComponente(b, ctx) {
 
   switch (b.componente) {
 
+    /* ================= IMAGEN ================= */
     case "image":
       return renderGaleria(ctx.imgs);
 
+    /* ================= NOMBRE ================= */
+    case "name":
+      return `
+        <h1 class="text-3xl font-bold leading-tight">
+          ${ctx.p.nombre}
+        </h1>
+      `;
+
+
+    case "brand":
+      return ctx.p.marca
+        ? `
+           <div class="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+             ${ctx.p.marca}
+          </div>
+        `
+        : "";
+
+
+    /* ================= CATEGORÍA ================= */
+    case "category":
+      return `
+        <div class="text-sm text-gray-500 uppercase tracking-wide">
+          ${ctx.p.categoria || ""}
+        </div>
+      `;
+
+    /* ================= PRECIO ================= */
     case "price":
       return `
         <div>
@@ -436,23 +510,72 @@ function renderComponente(b, ctx) {
         </div>
       `;
 
+    /* ================= OFERTA ================= */
     case "offer":
       return ctx.p.es_oferta
         ? `<div class="text-red-600 font-bold">🔥 OFERTA</div>`
         : "";
 
+    /* ================= DETALLE CORTO ================= */
+    case "short_description":
+      return `
+        <p class="text-gray-700">
+          ${
+            ctx.p.detalle_corto
+              ? ctx.p.detalle_corto
+              : (ctx.p.descripcion || "").slice(0, 140) + "..."
+          }
+        </p>
+      `;
+
+    /* ================= PRESENTACIONES ================= */
     case "presentations":
       return renderPresentaciones(ctx.presentaciones);
 
+    /* ================= VARIANTES / UNIDAD ================= */
+    case "variant":
+      return ctx.presentaciones?.length
+        ? `
+          <div class="text-sm text-gray-600 space-y-1">
+            ${ctx.presentaciones.map(v => `
+              <div>
+                ${v.cantidad || ""} ${v.unidad || ""}
+                ${v.talla ? " · " + v.talla : ""}
+              </div>
+            `).join("")}
+          </div>
+        `
+        : "";
+
+    /* ================= COLORES ================= */
+    case "color":
+      return ctx.p.colores?.length
+        ? `
+          <div class="flex gap-2 items-center">
+            ${ctx.p.colores.map(c => `
+              <span
+                title="${c}"
+                class="w-5 h-5 rounded-full border"
+                style="background:${c}">
+              </span>
+            `).join("")}
+          </div>
+        `
+        : "";
+
+    /* ================= DESCRIPCIÓN LARGA ================= */
     case "description":
       return renderDescripcion(ctx.p);
 
+    /* ================= TEXTO LIBRE ================= */
     case "text":
       return `<div>${b.config?.contenido || ""}</div>`;
 
+    /* ================= IMAGEN PUBLICITARIA ================= */
     case "image_ad":
       return `<img src="${b.config?.url}" class="rounded-lg w-full">`;
 
+    /* ================= VIDEO ================= */
     case "video_ad":
       return `
         <video src="${b.config?.url}"
@@ -464,5 +587,6 @@ function renderComponente(b, ctx) {
       return "";
   }
 }
+
 
 
