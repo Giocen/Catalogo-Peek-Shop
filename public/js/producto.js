@@ -160,21 +160,20 @@ p.permitir_carrito ??= true;
     /* ================= LAYOUT GLOBAL (TIPO SHOPIFY) ================= */
 const layout = await cargarLayoutProducto();
 
-if (!layout.length && window.ES_ADMIN) {
-
-  // 👇 INICIALIZA EL CMS AUNQUE NO HAYA BLOQUES
-  if (typeof window.initAdminProducto === "function") {
-    window.initAdminProducto();
-  }
-
+if (!layout.length) {
   cont.innerHTML = `
     <div class="col-span-full text-center py-20 text-gray-400">
       <p class="text-lg font-semibold">🧱 Sin layout</p>
       <p class="mt-2">Usa “➕ Bloque layout” para empezar a diseñar este producto</p>
     </div>
   `;
+
+  if (window.ES_ADMIN && typeof window.initAdminProducto === "function") {
+    window.initAdminProducto();
+  }
   return;
 }
+
 
 
   const ctx = {
@@ -183,65 +182,43 @@ if (!layout.length && window.ES_ADMIN) {
     presentaciones
   };
 
- cont.innerHTML = `
+cont.innerHTML = `
   ${renderBreadcrumb(p)}
-
-  <div class="grid grid-cols-12 gap-8">
-
-    <!-- IZQUIERDA (IMAGEN / GALERÍA) -->
     <div
-      class="col-span-12 md:col-span-7 space-y-4 admin-layout-zone"
-      data-zona="left"
+      class="relative w-full min-h-[600px] admin-layout-zone"
+      data-zona="main"
     >
-      ${layout
-        .filter(b => b.zona === "left")
-        .map(b => `
-          <div
-            class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
-            data-layout-id="${b.id}"
-          >
-            ${renderComponente(b, ctx)}
-          </div>
-        `).join("")}
-    </div>
 
-    <!-- DERECHA (PRECIO / OFERTA / ENVÍO) -->
-    <div
-      class="col-span-12 md:col-span-5 space-y-4 admin-layout-zone"
-      data-zona="right"
-    >
-      ${layout
-        .filter(b => b.zona === "right")
-        .map(b => `
-          <div
-            class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
-            data-layout-id="${b.id}"
-          >
-            ${renderComponente(b, ctx)}
-          </div>
-        `).join("")}
-    </div>
+    ${layout.map(b => `
+      <div
+        class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
+        data-layout-id="${b.id}"
+        style="
+          position: absolute;
+          left: ${b.x || 20}px;
+          top: ${b.y || 20}px;
+          width: ${b.w || 300}px;
+          height: ${b.h || 80}px;
+        "
 
-    <!-- FULL WIDTH (DESCRIPCIÓN / TABS / INFO EXTRA) -->
-    <div
-      class="col-span-12 space-y-4 admin-layout-zone"
-      data-zona="full"
-    >
-      ${layout
-        .filter(b => b.zona === "full")
-        .map(b => `
-          <div
-            class="${window.ES_ADMIN ? "admin-layout-bloque" : ""}"
-            data-layout-id="${b.id}"
-          >
-            ${renderComponente(b, ctx)}
-          </div>
-        `).join("")}
-    </div>
+      >
+        ${renderComponente(b, ctx)}
+
+        ${window.ES_ADMIN ? `
+          <div class="admin-layout-resize-y"></div>
+        ` : ""}
+      </div>
+    `).join("")}
 
   </div>
 `;
 
+
+setTimeout(() => {
+  if (window.ES_ADMIN && typeof ajustarAlturaLayout === "function") {
+    ajustarAlturaLayout();
+  }
+}, 0);
 
 
   activarZoom();

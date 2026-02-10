@@ -10,20 +10,25 @@ import { supabase } from "./supabase.js";
 window.initAdminProducto = function () {
 
   const params = new URLSearchParams(location.search);
-  const productoId = params.get("id");
+const productoId = params.get("id");
 
-  if (!window.ES_ADMIN || !productoId) {
-    console.log("👤 producto.admin.js no activado");
-    return;
-  }
+if (!window.ES_ADMIN || !productoId) {
+  console.log("👤 producto.admin.js no activado");
+  return;
+}
 
-  setTimeout(() => {
-  activarOrdenLayout();
+// 🔒 Protección contra doble init (AQUÍ es donde va)
+if (window.__ADMIN_PRODUCTO_INIT__) return;
+window.__ADMIN_PRODUCTO_INIT__ = true;
+
+setTimeout(() => {
+  activarDragLibre();
   activarClickEditarLayout();
-  activarResizeLayout();
-  }, 0);
+  ajustarAlturaLayout(); // 👈 AQUÍ
+}, 0);
 
-  console.log("🛠️ producto.admin.js ACTIVADO");
+console.log("🛠️ producto.admin.js ACTIVADO");
+
 
   /* =========================================================
      🎨 ESTILOS ADMIN
@@ -151,10 +156,9 @@ window.initAdminProducto = function () {
 }
 
 .admin-layout-bloque {
-  position: relative;
+  position: absolute;
   outline: 2px dashed #f59e0b;
-  outline-offset: 4px;
-  border-radius: 8px;
+  background: white;
 }
 
 .admin-layout-bloque::after {
@@ -169,27 +173,76 @@ window.initAdminProducto = function () {
   border-radius: 999px;
 }
 
-/* ↔️ RESIZE HANDLE */
-.admin-layout-resize {
-  position: absolute;
-  top: 0;
-  right: -6px;
-  width: 12px;
-  height: 100%;
-  cursor: ew-resize;
-  z-index: 10;
+
+.admin-layout-zone {
+  min-height: 80px;
+  border: 2px dashed transparent;
+  padding: 6px;
 }
 
-.admin-layout-resize::after {
+.admin-layout-zone {
+  transition: height 0.2s ease;
+}
+
+
+.admin-layout-zone:hover {
+  border-color: #22c55e;
+  background: rgba(34,197,94,0.05);
+}
+
+.admin-layout-zone::before {
+  content: "Suelta aquí";
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  color: #22c55e;
+  opacity: 0;
+  padding: 6px 0;
+}
+
+.admin-layout-zone:hover::before {
+  opacity: 1;
+}
+
+.zone-drop {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #f8fafc,
+      #f8fafc 10px,
+      #f1f5f9 10px,
+      #f1f5f9 20px
+    );
+  border: 2px dashed #cbd5f5;
+  border-radius: 12px;
+}
+
+.zone-drop::before {
+  content: "Suelta aquí";
+  color: #64748b;
+  font-size: 12px;
+}
+
+.admin-layout-resize-y {
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  cursor: ns-resize;
+  z-index: 20;
+}
+
+.admin-layout-resize-y::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 3px;
-  width: 6px;
-  height: 32px;
+  left: 50%;
+  top: 2px;
+  width: 40px;
+  height: 6px;
   background: #22c55e;
   border-radius: 6px;
-  transform: translateY(-50%);
+  transform: translateX(-50%);
 }
 
 
@@ -405,10 +458,6 @@ function abrirModalLayout() {
         </select>
 
 
-        <label class="font-semibold text-sm">Columnas (1–4)</label>
-        <input id="lCols" type="number" min="1" max="4"
-               value="4" class="w-full border rounded p-2">
-
         <label class="font-semibold text-sm">Contenido / URL (opcional)</label>
         <input id="lContent"
                placeholder="Texto o URL"
@@ -419,8 +468,7 @@ function abrirModalLayout() {
     showCancelButton: true,
     confirmButtonText: "Agregar",
     preConfirm: () => ({
-    componente: document.getElementById("lTipo").value,
-    columnas: Number(document.getElementById("lCols").value),
+    componente: document.getElementById("lTipo").value,    
     zona: document.getElementById("lZona").value,
     contenido: document.getElementById("lContent").value.trim()
     })
@@ -431,7 +479,8 @@ function abrirModalLayout() {
   });
 }
 
-async function guardarBloqueLayout({ componente, columnas, zona, contenido }) {
+async function guardarBloqueLayout({ componente, zona, contenido }) {
+
 
 
   const { data: ultimo } = await supabase
@@ -443,14 +492,19 @@ async function guardarBloqueLayout({ componente, columnas, zona, contenido }) {
 
   const orden = (ultimo?.orden ?? 0) + 1;
 
-  const payload = {
-    componente,
-    columnas,
-    zona,
-    orden,
-    activo: true,
-    config: {}
-  };
+ const yBase = orden * 140;
+
+const payload = {
+  componente,
+  orden,
+  activo: true,
+  x: 40,
+  y: yBase, // 👈 AQUÍ
+  w: 320,
+  h: 120,
+  config: {}
+};
+
 
   if (contenido) {
     payload.config = componente === "text"
@@ -478,128 +532,6 @@ async function guardarBloqueLayout({ componente, columnas, zona, contenido }) {
   setTimeout(() => location.reload(), 900);
 }
 
-
-
-function activarOrdenLayout() {
-  const bloques = document.querySelectorAll(".admin-layout-bloque");
-  if (!bloques.length) return;
-
-  bloques.forEach(b => {
-    b.draggable = true;
-
-    b.addEventListener("dragstart", () => {
-      b.classList.add("dragging");
-    });
-
-    b.addEventListener("dragend", async () => {
-      b.classList.remove("dragging");
-      await guardarOrdenLayout();
-    });
-  });
-
-  const contenedor = bloques[0].parentElement;
-
-  contenedor.addEventListener("dragover", e => {
-    e.preventDefault();
-    const dragging = document.querySelector(".dragging");
-    const after = obtenerBloqueDespues(contenedor, e.clientY);
-
-    if (!after) contenedor.appendChild(dragging);
-    else contenedor.insertBefore(dragging, after);
-  });
-}
-
-function obtenerBloqueDespues(container, y) {
-  const bloques = [...container.querySelectorAll(".admin-layout-bloque:not(.dragging)")];
-
-  return bloques.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-
-    if (offset < 0 && offset > closest.offset) {
-      return { offset, element: child };
-    }
-    return closest;
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-async function guardarOrdenLayout() {
-  const bloques = [...document.querySelectorAll(".admin-layout-bloque")];
-
-  for (let i = 0; i < bloques.length; i++) {
-    const id = bloques[i].dataset.layoutId;
-    if (!id) continue;
-
-    await supabase
-      .from("catalogo_layout_producto")
-      .update({ orden: i + 1 })
-      .eq("id", id);
-  }
-
-  console.log("⬆️⬇️ Orden del layout guardado");
-  
-}
-
-function activarResizeLayout() {
-  document.querySelectorAll(".admin-layout-bloque").forEach(bloque => {
-    const handle = bloque.querySelector(".admin-layout-resize");
-    if (!handle) return;
-
-    let startX = 0;
-    let startCols = 0;
-    let gridWidth = 0;
-
-    handle.addEventListener("mousedown", e => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (!bloque.dataset.layoutId) return;
-
-      startX = e.clientX;
-      startCols = Number(bloque.dataset.cols || 4);
-
-      const grid = bloque.parentElement;
-      gridWidth = grid.getBoundingClientRect().width;
-
-      document.body.style.cursor = "ew-resize";
-
-      const onMove = ev => {
-        const delta = ev.clientX - startX;
-        const colWidth = gridWidth / 4;
-        let nuevasCols = Math.round((startCols * colWidth + delta) / colWidth);
-
-        nuevasCols = Math.max(1, Math.min(4, nuevasCols));
-
-        bloque.style.gridColumn = `span ${nuevasCols}`;
-        bloque.dataset.cols = nuevasCols;
-      };
-
-      const onUp = async () => {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-        document.body.style.cursor = "";
-
-        await guardarColumnasLayout(bloque.dataset.layoutId, bloque.dataset.cols);
-      };
-
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    });
-  });
-}
-
-async function guardarColumnasLayout(id, columnas) {
-  if (!id) return;
-
-  await supabase
-    .from("catalogo_layout_producto")
-    .update({ columnas: Number(columnas) })
-    .eq("id", id);
-
-  console.log("↔️ Columnas actualizadas:", columnas);
-}
-
-
 function activarClickEditarLayout() {
   document.querySelectorAll(".admin-layout-bloque").forEach(bloque => {
     bloque.addEventListener("dblclick", () => {
@@ -620,11 +552,7 @@ async function abrirModalEditarLayout(id) {
 
   Swal.fire({
     title: "Editar bloque layout",
-    html: `
-      <label class="block text-sm font-semibold">Columnas</label>
-      <input id="lCols" type="number" min="1" max="4"
-        value="${b.columnas}"
-        class="w-full border rounded p-2 mb-2">
+    html: `     
 
       <label class="flex items-center gap-2 text-sm mb-2">
         <input id="lActivo" type="checkbox" ${b.activo ? "checked" : ""}>
@@ -668,22 +596,23 @@ async function abrirModalEditarLayout(id) {
           .maybeSingle();
 
         await supabase
-          .from("catalogo_layout_producto")
-          .insert({
-            componente: b.componente,
-            columnas: b.columnas,
-            orden: (ultimo?.orden ?? 0) + 1,
-            activo: true,
-            config: b.config || {}
-          });
+        .from("catalogo_layout_producto")
+        .insert({
+          componente: b.componente,
+          orden: (ultimo?.orden ?? 0) + 1,
+          activo: true,
+          x: b.x ?? 40,
+          y: b.y ?? 40,
+          w: b.w ?? 320,
+          h: b.h ?? 120,
+          config: b.config || {}
+        });
 
         location.reload();
       };
     }
   }).then(async r => {
-    if (!r.isConfirmed) return;
-
-    const columnas = Number(document.getElementById("lCols").value);
+    if (!r.isConfirmed) return;    
     const activo = document.getElementById("lActivo").checked;
     const contenido = document.getElementById("lContent").value.trim();
 
@@ -693,9 +622,89 @@ async function abrirModalEditarLayout(id) {
 
     await supabase
       .from("catalogo_layout_producto")
-      .update({ columnas, activo, config })
+      .update({ activo, config })
       .eq("id", id);
 
     location.reload();
   });
+}
+
+function activarDragLibre() {
+  document.querySelectorAll(".admin-layout-bloque").forEach(bloque => {
+    let startX, startY, origX, origY;
+
+    bloque.addEventListener("mousedown", e => {
+
+      // ❌ No arrastrar si:
+      if (e.button !== 0) return; // solo click izquierdo
+      if (e.detail > 1) return; // evita doble click (para editar)
+      if (e.target.closest("input, textarea, button")) return;
+      if (e.target.classList.contains("admin-layout-resize-y")) return;
+
+      // ✅ Solo permitir drag desde el bloque
+      if (!e.target.closest(".admin-layout-bloque")) return;
+
+      e.preventDefault();
+
+      const parent = bloque.parentElement;
+      if (!parent) return;
+
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = bloque.offsetLeft;
+      origY = bloque.offsetTop;
+
+      const maxX = parent.clientWidth - bloque.offsetWidth;
+      const maxY = parent.clientHeight - bloque.offsetHeight;
+
+      bloque.classList.add("dragging");
+
+      document.onmousemove = ev => {
+        let newX = origX + (ev.clientX - startX);
+        let newY = origY + (ev.clientY - startY);
+
+        // 🧲 límites dentro del contenedor
+        newX = Math.max(0, Math.min(maxX, newX));
+        newY = Math.max(0, Math.min(maxY, newY));
+
+        bloque.style.left = newX + "px";
+        bloque.style.top  = newY + "px";
+      };
+
+      document.onmouseup = () => {
+        document.onmousemove = null;
+        document.onmouseup = null;
+        bloque.classList.remove("dragging");
+
+        // 🎨 Ajuste visual inmediato
+        ajustarAlturaLayout();
+
+        // 💾 Guardado en segundo plano
+        supabase
+          .from("catalogo_layout_producto")
+          .update({
+            x: bloque.offsetLeft,
+            y: bloque.offsetTop
+          })
+          .eq("id", bloque.dataset.layoutId);
+      };
+
+    });
+  });
+}
+
+
+function ajustarAlturaLayout() {
+  const zone = document.querySelector(".admin-layout-zone");
+  if (!zone) return;
+
+  let maxBottom = 0;
+
+  zone.querySelectorAll(".admin-layout-bloque").forEach(b => {
+    const bottom = b.offsetTop + b.offsetHeight;
+    if (bottom > maxBottom) maxBottom = bottom;
+  });
+
+  // Altura mínima + crecimiento automático
+  zone.style.height = Math.max(maxBottom + 40, 600) + "px";
 }
