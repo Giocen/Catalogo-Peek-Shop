@@ -187,7 +187,7 @@ const baseColors = [
 
 function renderColores() {
   colorPicker.innerHTML = [...baseColors, ...colores].map(c => {
-    const activo = colores.find(x => x.nombre === c.nombre);
+    const activo = colores.find(x => x.hex === c.hex);
     return `
       <div class="relative">
         <div class="w-8 h-8 rounded-full border cursor-pointer"
@@ -203,11 +203,11 @@ function renderColores() {
 }
 
 window.toggleColor = (n, h) => {
-  if (colores.find(c => c.nombre === n)) {
+  if (colores.find(c => c.hex === h)) {
     colores = colores.filter(c => c.nombre !== n);
     delete stockColor[n];
   } else {
-    colores.push({ nombre: n, hex: h });
+    colores.push({ nombre: h, hex: h });
     stockColor[n] = 0;
   }
   renderColores();
@@ -621,7 +621,7 @@ if (btnGuardar) btnGuardar.onclick = async () => {
             es_oferta: es_oferta.checked,
             activo: activo.checked,
             notas: notas.value,
-            colores: colores.map(c => c.nombre)
+            colores: colores.map(c => c.hex)
           };
 
     
@@ -955,13 +955,13 @@ window.editarProducto = async (id) => {
   notas.value = producto.notas || "";
 
   // ================= COLORES (AQUÍ VA) =================
-  colores = (producto.colores || []).map(nombre => {
-    const base = baseColors.find(b => b.nombre === nombre);
-    return {
-      nombre,
-      hex: base?.hex || "#000000"
-    };
-  });  
+    colores = (producto.colores || []).map(hex => {
+      return {
+        nombre: hex, // ya no usamos nombre real
+        hex: hex
+      };
+    });
+
   stockColor = {};
   renderColores();
   renderStock();

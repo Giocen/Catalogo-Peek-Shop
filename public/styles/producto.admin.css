@@ -1,0 +1,76 @@
+/* ==============================
+   ADMIN – CAMPOS EDITABLES
+============================== */
+.admin-editable {
+  position: relative;
+  outline: 2px dashed #3b82f6;
+  outline-offset: 4px;
+  border-radius: 6px;
+  cursor: text;
+}
+
+.admin-editable:hover {
+  background: rgba(59,130,246,0.06);
+}
+
+.admin-editable[data-editing="1"] {
+  outline-style: solid;
+  background: white;
+}
+
+.admin-editable::after {
+  content: "Editar";
+  position: absolute;
+  top: -10px;
+  right: 8px;
+  background: #2563eb;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  opacity: 0;
+}
+
+.admin-editable:hover::after {
+  opacity: 1;
+}
+
+/* ==============================
+   TOOLBAR ADMIN
+============================== */
+.admin-toolbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 999px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  display: flex;
+  gap: 12px;
+  z-index: 999999;
+}
+
+.admin-toolbar button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+@keyframes envioGratisPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.envio-gratis {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+  border-color: #22c55e !important;
+}
+
+.envio-animar {
+  animation: envioGratisPulse 0.4s ease-in-out;
+}

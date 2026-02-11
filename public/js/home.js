@@ -2,7 +2,7 @@ import { supabase } from "./supabase.js";
 import { abrirCarrito, agregarAlCarrito } from "./carrito.js";
 
 /* =========================================================
-   🔑 EXPONER FUNCIONES (NO CAMBIA LÓGICA)
+   🔑 EXPONER FUNCIONES
 ========================================================= */
 window.agregarAlCarrito = agregarAlCarrito;
 window.abrirCarrito = abrirCarrito;
@@ -13,45 +13,57 @@ window.abrirCarrito = abrirCarrito;
 const ZONAS = ["superior", "lateral-izq", "lateral-der"];
 
 /* =========================================================
-   CARGAR ZONAS (BLOQUES DINÁMICOS)
+   CARGAR ZONAS DINÁMICAS (catalogo_bloques)
 ========================================================= */
 async function cargarZona(zona) {
-  const { data, error } = await supabase
-    .from("catalogo_bloques")
-    .select("*")
-    .eq("zona", zona)
-    .eq("activo", true)
-    .order("orden");
+  try {
+    const { data, error } = await supabase
+      .from("catalogo_bloques")
+      .select("*")
+      .eq("zona", zona)
+      .eq("activo", true)
+      .order("orden", { ascending: true });
 
-  if (error) {
-    console.error("Error cargando zona", zona, error);
-    return;
+    if (error) throw error;
+
+    const cont = document.getElementById(`zona-${zona}`);
+    if (!cont) return;
+
+    if (!data?.length) {
+      cont.innerHTML = "";
+      return;
+    }
+
+    cont.innerHTML = data
+      .map(b => `
+        <div
+          class="rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition"
+          style="grid-column: span ${b.columnas || 4};
+                 height:${b.alto || 180}px"
+        >
+          ${
+            b.tipo === "video"
+              ? `<video src="${b.url}" autoplay muted loop
+                   class="w-full h-full object-cover"></video>`
+              : `<img src="${b.url}"
+                   class="w-full h-full object-cover">`
+          }
+        </div>
+      `)
+      .join("");
+
+  } catch (err) {
+    console.error("Error cargando zona:", zona, err);
   }
-
-  const cont = document.getElementById(`zona-${zona}`);
-  if (!cont) return;
-
-  cont.innerHTML = (data || [])
-    .map(b => `
-      <div
-        class="rounded-xl overflow-hidden bg-white shadow"
-        style="grid-column: span ${b.columnas}; height:${b.alto}px"
-      >
-        ${
-          b.tipo === "video"
-            ? `<video src="${b.url}" autoplay muted loop class="w-full h-full object-cover"></video>`
-            : `<img src="${b.url}" class="w-full h-full object-cover">`
-        }
-      </div>
-    `)
-    .join("");
 }
 
-ZONAS.forEach(cargarZona);
-
 /* =========================================================
-   RECARGAR ZONA CUANDO EL EDITOR GUARDA
+   INICIALIZAR ZONAS
 ========================================================= */
+function initZonas() {
+  ZONAS.forEach(zona => cargarZona(zona));
+}
+
 document.addEventListener("zona-actualizada", e => {
   cargarZona(e.detail);
 });
@@ -61,39 +73,57 @@ document.addEventListener("zona-actualizada", e => {
 ========================================================= */
 const contenedor = document.getElementById("productos");
 const categoriasDiv = document.getElementById("categorias");
-
 let productosCache = [];
 
 /* ---------------------------------------------------------
    CARGAR CATÁLOGO
 --------------------------------------------------------- */
 async function cargarCatalogo() {
-  const { data, error } = await supabase
-    .from("catalogo_productos")
-    .select(`
-      id,
-      nombre,
-      precio,
-      categoria,
-      catalogo_multimedia(url, tipo)
-    `)
-    .eq("activo", true);
+  try {
+    const { data, error } = await supabase
+      .from("catalogo_productos")
+      .select(`
+        id,
+        nombre,
+        precio,
+        categoria,
+        catalogo_multimedia(url, tipo)
+      `)
+      .eq("activo", true);
 
-  if (error) {
-    console.error("Error cargando productos", error);
-    return;
+    if (error) throw error;
+
+    productosCache = data || [];
+
+    renderCategorias(productosCache);
+    renderProductos(productosCache);
+
+  } catch (err) {
+    console.error("Error cargando productos:", err);
+    if (contenedor) {
+      contenedor.innerHTML = `
+        <div class="col-span-full text-center text-red-600 py-10">
+          Error cargando productos
+        </div>
+      `;
+    }
   }
-
-  productosCache = data || [];
-  renderCategorias(productosCache);
-  renderProductos(productosCache);
 }
 
 /* ---------------------------------------------------------
-   RENDER PRODUCTOS (MEJORADO, MISMA LÓGICA)
+   RENDER PRODUCTOS
 --------------------------------------------------------- */
 function renderProductos(productos) {
   if (!contenedor) return;
+
+  if (!productos.length) {
+    contenedor.innerHTML = `
+      <div class="col-span-full text-center text-gray-500 py-10">
+        No hay productos disponibles
+      </div>
+    `;
+    return;
+  }
 
   contenedor.innerHTML = productos
     .map(p => {
@@ -102,7 +132,7 @@ function renderProductos(productos) {
         "/img/placeholder.png";
 
       return `
-      <div class="bg-white rounded-xl shadow hover:shadow-lg transition flex flex-col">
+      <div class="bg-white rounded-xl shadow hover:shadow-xl transition flex flex-col">
 
         <!-- IMAGEN -->
         <div
@@ -151,7 +181,7 @@ function renderProductos(productos) {
 }
 
 /* =========================================================
-   ANIMACIÓN TIPO MERCADO LIBRE
+   ANIMACIÓN
 ========================================================= */
 window.animarAgregar = btn => {
   btn.classList.add("animate-pulse");
@@ -164,21 +194,24 @@ window.animarAgregar = btn => {
 function renderCategorias(productos) {
   if (!categoriasDiv) return;
 
-  const cats = [
-    ...new Set(productos.map(p => p.categoria).filter(Boolean))
-  ];
+  const cats = [...new Set(productos.map(p => p.categoria).filter(Boolean))];
 
   categoriasDiv.innerHTML = `
     <button class="chip activo" data-cat="">Todo</button>
-    ${cats.map(c => `<button class="chip" data-cat="${c}">${c}</button>`).join("")}
+    ${cats.map(c => `
+      <button class="chip" data-cat="${c}">${c}</button>
+    `).join("")}
   `;
 
   categoriasDiv.querySelectorAll(".chip").forEach(btn => {
     btn.addEventListener("click", () => {
-      categoriasDiv.querySelectorAll(".chip").forEach(b => b.classList.remove("activo"));
+      categoriasDiv.querySelectorAll(".chip")
+        .forEach(b => b.classList.remove("activo"));
+
       btn.classList.add("activo");
 
       const cat = btn.dataset.cat;
+
       renderProductos(
         cat
           ? productosCache.filter(p => p.categoria === cat)
@@ -212,4 +245,7 @@ if (buscador) {
 /* =========================================================
    INIT
 ========================================================= */
-cargarCatalogo();
+document.addEventListener("DOMContentLoaded", () => {
+  initZonas();
+  cargarCatalogo();
+});

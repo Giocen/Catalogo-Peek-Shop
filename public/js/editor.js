@@ -4,8 +4,8 @@ import { supabase } from "./supabase.js";
    CONFIG
 ========================================================= */
 const MODO_ADMIN = localStorage.getItem("modo_admin") === "1";
+
 if (!MODO_ADMIN) {
-  // Cliente: no hace absolutamente nada
   console.log("Modo cliente activo");
 }
 
@@ -59,7 +59,7 @@ function abrirEditor(zona) {
         </select>
 
         <label class="block text-sm font-semibold">Alto (px)</label>
-        <input id="alto" type="number" class="swal2-input" value="160">
+        <input id="alto" type="number" class="swal2-input" value="200">
 
         <div
           id="drop"
@@ -149,7 +149,7 @@ function renderPreview() {
 }
 
 /* =========================================================
-   GUARDAR BLOQUE
+   GUARDAR BLOQUE (USA catalogo_banners)
 ========================================================= */
 async function guardarBloque() {
   if (!zonaActual || !mediaActual) {
@@ -165,13 +165,18 @@ async function guardarBloque() {
     : "imagen";
 
   try {
-    // 🧹 Limpiar bloques anteriores de la zona
+    /* -----------------------------------------------------
+       BORRAR BLOQUES ANTERIORES DE LA ZONA
+    ----------------------------------------------------- */
     await supabase
-      .from("catalogo_bloques")
+      .from("catalogo_banners")
       .delete()
       .eq("zona", zonaActual);
 
-    const path = `bloques/${zonaActual}/${Date.now()}_${mediaActual.name}`;
+    /* -----------------------------------------------------
+       SUBIR ARCHIVO A STORAGE
+    ----------------------------------------------------- */
+    const path = `banners/${zonaActual}/${Date.now()}_${mediaActual.name}`;
 
     const { error: uploadError } = await supabase.storage
       .from("catalogo")
@@ -183,17 +188,26 @@ async function guardarBloque() {
       .from("catalogo")
       .getPublicUrl(path);
 
-    await supabase.from("catalogo_bloques").insert({
-      zona: zonaActual,
-      tipo,
-      url: data.publicUrl,
-      columnas,
-      alto,
-      orden: Date.now(),
-      activo: true
-    });
+    /* -----------------------------------------------------
+       INSERTAR EN TABLA catalogo_banners
+    ----------------------------------------------------- */
+    const { error: insertError } = await supabase
+      .from("catalogo_banners")
+      .insert({
+        zona: zonaActual,
+        tipo,
+        url: data.publicUrl,
+        columnas,
+        alto,
+        orden: Date.now(),
+        activo: true
+      });
 
-    // 🔄 Notificar al home
+    if (insertError) throw insertError;
+
+    /* -----------------------------------------------------
+       NOTIFICAR AL HOME
+    ----------------------------------------------------- */
     document.dispatchEvent(
       new CustomEvent("zona-actualizada", {
         detail: zonaActual
