@@ -16,21 +16,18 @@ import {
 const LAYOUT_BASE = [
   { componente: "image", zona: "left", orden: 1 },
 
-  { componente: "brand", zona: "right", orden: 2 },
-  { componente: "name", zona: "right", orden: 3 },
-  { componente: "category", zona: "right", orden: 4 },
+  { componente: "brand", zona: "right", orden: 1 },
+  { componente: "name", zona: "right", orden: 2 },
+  { componente: "category", zona: "right", orden: 3 },
 
+  { componente: "offer", zona: "right", orden: 4 },
   { componente: "price", zona: "right", orden: 5 },
-  { componente: "offer", zona: "right", orden: 6 },
+  { componente: "color", zona: "right", orden: 6 },
+  { componente: "variant", zona: "right", orden: 7 },
 
-  { componente: "color", zona: "right", orden: 7 },
-  { componente: "variant", zona: "right", orden: 8 },
+  { componente: "buttons", zona: "right", orden: 8 },
   
-
-  { componente: "buttons", zona: "right", orden: 10 },
-  { componente: "description", zona: "full", orden: 11 }
 ];
-
 /* =========================================================
    🔐 DETECTAR ADMIN (NO BLOQUEANTE)
 ========================================================= */
@@ -146,6 +143,7 @@ if (!imgs.length) {
   imgs.push("/img/placeholder.png");
 }
 
+window._productoActualImgs = imgs;
 
 
   /* ================= PRESENTACIONES ================= */
@@ -168,30 +166,35 @@ if (!imgs.length) {
 
   /* ================= RENDER PRINCIPAL ================= */
 cont.innerHTML = `
-  ${renderBreadcrumb(p)}
+ ${renderBreadcrumb(p)}
 
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="grid md:grid-cols-2 gap-10">
-
-      <!-- IZQUIERDA -->
-      <div class="space-y-6">
-        ${LAYOUT_BASE
-          .filter(b => b.zona === "left")
-          .sort((a,b)=>a.orden-b.orden)
-          .map(b => renderComponente(b, ctx))
-          .join("")}
+      <!-- MARCA + NOMBRE SOLO MÓVIL -->
+      <div class="md:hidden mb-4 space-y-1">
+        ${renderComponente({ componente: "brand", mobileTop: true }, ctx)}
+        ${renderComponente({ componente: "name", mobileTop: true }, ctx)}
       </div>
+      <div class="max-w-6xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-      <!-- DERECHA -->
-      <div class="space-y-6">
-        ${LAYOUT_BASE
-          .filter(b => b.zona === "right")
-          .sort((a,b)=>a.orden-b.orden)
-          .map(b => renderComponente(b, ctx))
-          .join("")}
-      </div>
+          <!-- IZQUIERDA -->
+          <div class="space-y-6">
+            ${LAYOUT_BASE
+              .filter(b => b.zona === "left")
+              .sort((a,b)=>a.orden-b.orden)
+              .map(b => renderComponente(b, ctx))
+              .join("")}
+          </div>
 
-    </div>
+          <!-- DERECHA -->
+          <div class="space-y-6">
+            ${LAYOUT_BASE
+              .filter(b => b.zona === "right")
+              .sort((a,b)=>a.orden-b.orden)
+              .map(b => renderComponente(b, ctx))
+              .join("")}
+          </div>
+
+        </div>
 
 <!-- ================= TABS PROFESIONALES ================= -->
   <div class="mt-12">
@@ -239,18 +242,62 @@ cont.innerHTML = `
 
           ${
             ctx.p.descripcion
-              ? `
-              <div class="prose prose-sm max-w-none text-gray-700 leading-relaxed space-y-4">
-                ${ctx.p.descripcion
-                  .split("\n\n")
-                  .map(p => `<p>${p}</p>`)
-                  .join("")}
-              </div>
-              `
+              ? (() => {
+                  const texto = ctx.p.descripcion;
+                  const resumen = texto.length > 450
+                    ? texto.substring(0, 450) + "..."
+                    : texto;
+
+                  return `
+                    <div class="max-w-4xl mx-auto">
+
+                      <div class="text-gray-700 text-[15px] leading-7 space-y-4">
+
+                        <div id="descResumenTab" class="whitespace-pre-line">
+                          ${resumen}
+                        </div>
+
+                        <div id="descCompletaTab"
+                            class="hidden whitespace-pre-line">
+                          ${texto}
+                        </div>
+
+                      </div>
+
+                      ${
+                        texto.length > 450
+                          ? `
+                          <div class="mt-6 text-center">
+                            <button id="btnToggleDescTab"
+                              class="inline-flex items-center gap-2
+                                    text-blue-600 font-semibold
+                                    hover:text-blue-700 transition">
+
+                              <span id="txtToggleDesc">Ver más</span>
+
+                              <svg id="iconToggleDesc"
+                                class="w-4 h-4 transition-transform duration-300"
+                                fill="none" stroke="currentColor"
+                                stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      d="M19 9l-7 7-7-7"/>
+                              </svg>
+
+                            </button>
+                          </div>
+                          `
+                          : ""
+                      }
+
+                    </div>
+                  `;
+                })()
               : `
-              <div class="text-sm text-gray-400">
-                Este producto no tiene descripción registrada.
-              </div>
+                <div class="text-sm text-gray-400 text-center">
+                  Este producto no tiene descripción registrada.
+                </div>
               `
           }
 
@@ -296,7 +343,7 @@ cont.innerHTML = `
 
 `;
 
-  activarZoom();
+  activarZoom();  
   activarBotones(p, imgs[0]);
   cargarRelacionados(p.categoria, p.id);
   actualizarEnvio(ctx.p.precio);
@@ -358,138 +405,242 @@ function renderBreadcrumb(p) {
       ${p.categoria}
     </div>`;
 }
-function renderGaleria(imgs) {
-  return `
-    <div class="flex flex-col items-center gap-4">
+  
+      function renderGaleria(imgs) {
 
-      <!-- Imagen principal -->
-      <div id="imgZoomWrap"
-        class="relative border rounded-xl bg-gray-50 
-              w-full aspect-square flex items-center justify-center">
-        <img id="imgPrincipal"
-          src="${imgs[0]}"
-          class="max-w-full max-h-full object-contain">
-      </div>
+        return `
+          <div class="space-y-4">
 
-      <!-- Thumbnails -->
-      <div class="flex gap-2">
-        ${imgs.map(i => `
-          <img src="${i}"
-            onclick="_cambiarImg('${i}')"
-            class="w-14 h-14 border rounded cursor-pointer object-contain">
-        `).join("")}
-      </div>
+            <!-- IMAGEN PRINCIPAL -->
+            <div id="imgZoomWrap"
+                class="relative overflow-hidden rounded-xl bg-gray-50 aspect-square">
 
-    </div>`;
-}
+              <img id="imgPrincipal"
+                  src="${imgs[0]}"
+                  onclick="abrirLightbox(0)"
+                  class="cursor-zoom-in object-contain w-full h-full transition duration-300">
+            </div>
 
-function renderPresentaciones(presentaciones) {
-  if (!presentaciones?.length) return "";
-  return `
-    <div class="space-y-3">
-      ${presentaciones.map(p => `
-        <div class="border rounded p-3 bg-gray-50">
-          <div class="font-semibold">
-            ${p.nombre || ""}
-            ${p.cantidad ? `· ${p.cantidad} ${p.unidad}` : ""}
-            ${p.talla ? `· ${p.talla}` : ""}
+            <!-- MINIATURAS -->
+            <div class="flex gap-3 overflow-x-auto no-scrollbar">
+
+              ${imgs.map((src,i)=>`
+                <div
+                  class="thumb border rounded-lg p-1 cursor-pointer
+                        transition duration-200
+                        ${i === 0 ? 'border-yellow-400 ring-2 ring-yellow-400' : 'border-gray-300'}"
+                  data-index="${i}"
+                  style="min-width:70px"
+                  onclick="irAImagen(${i})">
+
+                  <img src="${src}"
+                      class="h-16 w-full object-contain">
+
+                </div>
+              `).join("")}
+
+            </div>
+
           </div>
-          <div class="font-bold mt-1">$${p.precio}</div>
-        </div>
-      `).join("")}
-    </div>`;
-}
+
+          <!-- ================= LIGHTBOX ================= -->
+          <div id="lightbox"
+              class="fixed inset-0 bg-black/90 hidden items-center justify-center z-[999999]">
+
+            <!-- Flecha izquierda -->
+            <button id="lbPrev"
+              class="absolute left-6 text-white text-4xl hover:scale-110 transition">
+              ❮
+            </button>
+
+            <!-- Imagen grande -->
+            <div class="relative flex items-center justify-center w-full h-full">
+
+              <img id="lbImg"
+                  class="max-h-[90vh] max-w-[90vw] object-contain transition duration-300">
+
+              <div id="lbCounter"
+                  class="absolute bottom-6 text-white text-sm bg-black/60 px-3 py-1 rounded-full">
+              </div>
+
+            </div>
+
+            <!-- Flecha derecha -->
+            <button id="lbNext"
+              class="absolute right-6 text-white text-4xl hover:scale-110 transition">
+              ❯
+            </button>
+
+            <!-- Cerrar -->
+            <button id="lbClose"
+              class="absolute top-6 right-6 text-white text-3xl">
+              ✕
+            </button>
+
+          </div>
+        `;
+      }
+
+      function renderPresentaciones(presentaciones) {
+        if (!presentaciones?.length) return "";
+        return `
+          <div class="space-y-3">
+            ${presentaciones.map(p => `
+              <div class="border rounded p-3 bg-gray-50">
+                <div class="font-semibold">
+                  ${p.nombre || ""}
+                  ${p.cantidad ? `· ${p.cantidad} ${p.unidad}` : ""}
+                  ${p.talla ? `· ${p.talla}` : ""}
+                </div>
+                <div class="font-bold mt-1">$${p.precio}</div>
+              </div>
+            `).join("")}
+          </div>`;
+      }
 
 /* =========================================================
    BOTONES (CARRITO INTACTO)
 ========================================================= */
 function activarBotones(p, imgBase) {
+  
   document.addEventListener("click", e => {
-    if (
-      e.target.id !== "btnAgregar" &&
-      e.target.id !== "btnComprarAhora"
-    ) return;
 
-  if (!window._presentacionSeleccionada) {
+    const btnAgregar = e.target.closest("#btnAgregar");
+    const btnComprar = e.target.closest("#btnComprarAhora");
 
-  Swal.fire({
-    icon: "warning",
-    title: "Selecciona una presentación",
-    text: "Elige una opción antes de continuar",
-    confirmButtonText: "Entendido",
-    confirmButtonColor: "#16a34a",
-    background: "#ffffff",
-    backdrop: "rgba(0,0,0,0.45)",
-    showClass: {
-      popup: "animate__animated animate__bounceIn"
-    },
-    hideClass: {
-      popup: "animate__animated animate__fadeOut"
+    if (!btnAgregar && !btnComprar) return;
+
+    if (!window._presentacionSeleccionada) {
+
+      Swal.fire({
+        icon: "warning",
+        title: "Selecciona una presentación",
+        text: "Elige una opción antes de continuar",
+        confirmButtonColor: "#16a34a"
+      });
+
+      const variantes = document.querySelector(".variantes");
+
+      if (variantes) {
+        variantes.scrollIntoView({ behavior: "smooth", block: "center" });
+        variantes.classList.add("ring-2","ring-red-400","animate-pulse");
+
+        setTimeout(() => {
+          variantes.classList.remove("ring-2","ring-red-400","animate-pulse");
+        }, 1200);
+      }
+
+      return;
     }
-  });
 
-  const variantes = document.querySelector(".variantes");
-
-  if (variantes) {
-
-    // 🔹 Scroll suave
-    variantes.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-
-    // 🔹 Micro animación visual
-    variantes.classList.add("ring-2", "ring-red-400", "animate-pulse");
-
-    setTimeout(() => {
-      variantes.classList.remove("ring-2", "ring-red-400", "animate-pulse");
-    }, 1200);
-  }
-
-  return;
-}
-    agregarAlCarrito({
+    const producto = {
       id: p.id,
       presentacion_id: window._presentacionSeleccionada.id,
       nombre: p.nombre,
       precio: window._presentacionSeleccionada.precio,
       imagen: imgBase,
       presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
-      color: window._colorSeleccionado || null
-    });
+      color: window._colorSeleccionado || null,
+      cantidad: 1
+    };
+
+    // 🟦 AGREGAR AL CARRITO NORMAL
+    if (btnAgregar) {
+      agregarAlCarrito(producto);
+      return;
+    }
+
+    // 🟩 COMPRA DIRECTA
+    if (btnComprar) {
+
+        const productoCompra = {
+          id: p.id,
+          presentacion_id: window._presentacionSeleccionada.id,
+          nombre: p.nombre,
+          precio: window._presentacionSeleccionada.precio,
+          imagen: imgBase,
+          presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
+          color: window._colorSeleccionado || null,
+          cantidad: 1
+        };
+
+
+        // Ejecutar flujo directo pasando el producto
+        if (typeof window.comprarAhoraDirecto === "function") {
+          window.comprarAhoraDirecto(productoCompra);
+        }
+
+        return;
+      }
   });
+
 }
-
-
 
 /* =========================================================
    ZOOM
 ========================================================= */
-function activarZoom() {
-  if (window.innerWidth < 768) return; // ⛔ no zoom en móvil
+        function activarZoom() {
 
-  const wrap = document.getElementById("imgZoomWrap");
-  const img = document.getElementById("imgPrincipal");
-  if (!wrap || !img) return;
+          const wrap = document.getElementById("imgZoomWrap");
+          const img = document.getElementById("imgPrincipal");
 
-  wrap.onmousemove = e => {
-    const r = wrap.getBoundingClientRect();
-    img.style.transformOrigin =
-      `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
-    img.style.transform = "scale(1.8)";
-  };
+          if (!wrap || !img) return;
 
-  wrap.onmouseleave = () => {
-    img.style.transform = "scale(1)";
-  };
-}
+          let scale = 1;
+          let startX = 0;
+          let startY = 0;
+          let posX = 0;
+          let posY = 0;
+          let isDragging = false;
 
+          /* ================= DESKTOP ================= */
+          if (window.innerWidth >= 768) {
 
-window._cambiarImg = src => {
-  const img = document.getElementById("imgPrincipal");
-  if (img) img.src = src;
-};
+            wrap.onmousemove = e => {
+              const r = wrap.getBoundingClientRect();
+              img.style.transformOrigin =
+                `${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`;
+              img.style.transform = "scale(1.8)";
+            };
 
+            wrap.onmouseleave = () => {
+              img.style.transform = "scale(1)";
+            };
+
+            return;
+          }
+
+          /* ================= MÓVIL ================= */
+
+          // Doble tap para activar zoom
+          wrap.addEventListener("dblclick", () => {
+            scale = scale === 1 ? 2 : 1;
+            img.style.transition = "transform 0.3s ease";
+            img.style.transform = `scale(${scale})`;
+          });
+
+          // Arrastre cuando está en zoom
+          wrap.addEventListener("touchstart", e => {
+            if (scale === 1) return;
+            isDragging = true;
+            startX = e.touches[0].clientX - posX;
+            startY = e.touches[0].clientY - posY;
+          });
+
+          wrap.addEventListener("touchmove", e => {
+            if (!isDragging) return;
+            posX = e.touches[0].clientX - startX;
+            posY = e.touches[0].clientY - startY;
+
+            img.style.transform =
+              `scale(${scale}) translate(${posX}px, ${posY}px)`;
+          });
+
+          wrap.addEventListener("touchend", () => {
+            isDragging = false;
+          });
+
+        }
 /* =========================================================
    PRODUCTOS RELACIONADOS
 ========================================================= */
@@ -548,39 +699,68 @@ function renderComponente(b, ctx) {
       return renderGaleria(ctx.imgs);
 
     /* ================= MARCA ================= */
-    case "brand":
-      return ctx.p.marca
-        ? `<div class="text-sm uppercase text-gray-500">${ctx.p.marca}</div>`
-        : "";
+      case "brand": {
+        if (!ctx.p.marca) return "";
 
+        const esMobileTop = b && b.mobileTop;
+
+        const clase = esMobileTop
+          ? "block md:hidden text-xs uppercase tracking-wide text-blue-600 hover:underline cursor-pointer"
+          : "hidden md:block text-sm uppercase text-blue-600 hover:underline cursor-pointer";
+
+        return `
+          <a href="/?marca=${encodeURIComponent(ctx.p.marca)}"
+            class="${clase}">
+            ${ctx.p.marca}
+          </a>
+        `;
+    }
     /* ================= NOMBRE ================= */
-    case "name":
-      return `
-        <h1 class="text-xl font-bold leading-tight">
-          ${ctx.p.nombre}
-        </h1>
-      `;
+        case "name": {
 
+          const esMobileTop = b && b.mobileTop;
 
+          const clase = esMobileTop
+            ? "block md:hidden text-xl font-semibold leading-snug text-gray-900"
+            : "hidden md:block text-xl md:text-2xl font-semibold leading-snug text-gray-900";
+
+          return `
+            <h1 class="${clase}">
+              ${ctx.p.nombre}
+            </h1>
+          `;
+      }
     /* ================= CATEGORÍA ================= */
     case "category":
-      return `<div class="text-sm text-gray-500">${ctx.p.categoria}</div>`;
+          return "";
 
     /* ================= PRECIO ================= */
       case "price":
+
+        const pres = window._presentacionSeleccionada;
+        const precioActual = pres?.precio || ctx.p.precio;
+
         return `
-          <div class="space-y-3">
+          <div class="space-y-2">
 
             <div id="precioProducto"
-                class="text-3xl font-bold text-green-600">
-              $${ctx.p.precio}
+                class="text-3xl md:text-4xl font-semibold text-gray-900">
+              $${precioActual}
+            </div>
+
+            <div id="precioPorUnidad"
+                class="text-sm text-gray-500">
+              ${
+                pres?.cantidad
+                  ? `Precio por kg: $${(precioActual / pres.cantidad).toFixed(2)}`
+                  : ""
+              }
             </div>
 
             <!-- ENVÍO DINÁMICO -->
             <div id="bloqueEnvio"
                 class="rounded-xl bg-gray-50 border p-4 text-sm transition space-y-3">
 
-              <!-- Selector Zona -->
               <div>
                 <select id="zonaEnvio"
                   class="w-full border rounded-lg p-2 text-xs">
@@ -589,7 +769,6 @@ function renderComponente(b, ctx) {
                 </select>
               </div>
 
-              <!-- Info envío -->
               <div class="flex items-center gap-2">
                 <span id="iconoEnvio">📦</span>
                 <span id="textoEnvio" class="font-medium text-gray-700">
@@ -597,7 +776,6 @@ function renderComponente(b, ctx) {
                 </span>
               </div>
 
-              <!-- Barra progreso -->
               <div id="barraEnvioWrap" class="hidden">
                 <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
                   <div id="barraEnvio"
@@ -612,7 +790,6 @@ function renderComponente(b, ctx) {
 
           </div>
         `;
-
 
     /* ================= OFERTA ================= */
     case "offer":
@@ -670,25 +847,30 @@ function renderComponente(b, ctx) {
 
 
             /* ================= VARIANTES ================= */
-            case "variant":
-              return ctx.presentaciones?.length
-                ? `
-                  <div class="variantes">
-                    ${ctx.presentaciones.map(v => `
-                      <button
-                        class="variante px-3 py-2 rounded-full border text-sm hover:bg-blue-50 transition"
-                        data-id="${v.id}"
-                        onclick="seleccionarPresentacion('${v.id}')">
-                        ${v.cantidad || ""} ${v.unidad || ""}
-                      </button>
-                    `).join("")}
-                  </div>
-                `
-                : "";
+       case "variant":
 
+        return ctx.presentaciones?.length
+          ? `
+            <div class="variantes grid gap-2"
+                style="grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));">
 
+              ${ctx.presentaciones.map(v => `
+                <div
+                  class="variante border rounded-lg px-3 py-2
+                        text-center text-sm font-medium
+                        hover:border-yellow-400
+                        cursor-pointer transition-all duration-200"
+                  data-id="${v.id}"
+                  onclick="seleccionarPresentacion('${v.id}')">
 
-        
+                  ${v.talla}
+
+                </div>
+              `).join("")}
+
+            </div>
+          `
+          : "";
     /* ================= BOTONES ================= */
     case "buttons":
       return `
@@ -704,18 +886,8 @@ function renderComponente(b, ctx) {
         </div>
       `;
 
-    /* ================= DESCRIPCIÓN ================= */
-   case "description":
-      return `
-        <div class="text-sm text-gray-700 leading-relaxed">
-          ${ctx.p.descripcion || ""}
-        </div>
-      `;
-
-
-    default:
-      return "";
-  }
+  
+    }
 }
 
 document.addEventListener("click", e => {
@@ -755,7 +927,7 @@ window.seleccionarPresentacion = id => {
   );
 
   const btn = document.querySelector(`.variante[data-id="${id}"]`);
-  if (btn) btn.classList.add("ring-2", "ring-blue-600", "bg-blue-50");
+  if (btn) btn.classList.add("ring-2", "ring-yellow-400", "bg-yellow-50", "border-yellow-400");
 };
 
 
@@ -830,10 +1002,32 @@ function actualizarEnvio(precio) {
       }
 
       if (mensajeExtra) {
+
+        const ahora = new Date();
+        const hora = ahora.getHours();
+        const dentroHorario = hora >= 9 && hora < 21;
+
+        const mensajeHorario = dentroHorario
+          ? `
+            <div class="mt-2 px-3 py-2 rounded-lg
+                        bg-green-100 text-green-800
+                        text-xs font-semibold">
+              🚀 Entrega estimada: Hoy antes de las 9 PM
+            </div>
+          `
+          : `
+            <div class="mt-2 px-3 py-2 rounded-lg
+                        bg-red-100 text-red-700
+                        text-xs font-semibold">
+              🕘 Entrega estimada: Mañana a partir de las 9 AM
+            </div>
+          `;
+
         mensajeExtra.innerHTML = `
           Te faltan 
           <strong class="text-green-600">$${faltan.toFixed(0)}</strong>
           para envío gratis
+          ${mensajeHorario}
         `;
       }
 
@@ -965,3 +1159,220 @@ window.seleccionarColor = color => {
   }
 };
 
+    function activarCarrusel() {
+      // Ya no usamos carrusel scroll.
+      // Las miniaturas manejan la navegación.
+    return;
+
+  const actualizarDots = () => {
+    const index = Math.round(
+      scroll.scrollLeft / scroll.clientWidth
+    );
+
+    dots.forEach(d =>
+      d.classList.remove("bg-yellow-400", "scale-110")
+    );
+
+    if (dots[index]) {
+      dots[index].classList.add("bg-yellow-400", "scale-110");
+    }
+  };
+
+  scroll.addEventListener("scroll", actualizarDots);
+
+  actualizarDots();
+}
+
+    window.irAImagen = index => {
+
+      const imgs = window._productoActualImgs || [];
+      const img = document.getElementById("imgPrincipal");
+
+      if (!img || !imgs[index]) return;
+
+      img.style.opacity = "0";
+
+      setTimeout(() => {
+        img.src = imgs[index];
+        img.style.opacity = "1";
+      }, 150);
+
+      document.querySelectorAll(".thumb").forEach(t =>
+        t.classList.remove("border-yellow-400","ring-2","ring-yellow-400")
+      );
+
+      const activa = document.querySelector(`.thumb[data-index="${index}"]`);
+      if (activa) {
+        activa.classList.add("border-yellow-400","ring-2","ring-yellow-400");
+      }
+
+      abrirLightbox(index); // 👈 ESTA LÍNEA
+    };
+
+/* =========================================================
+   LIGHTBOX PRO
+========================================================= */
+
+let lbIndex = 0;
+let touchStartX = 0;
+
+window.abrirLightbox = index => {
+
+  const lightbox = document.getElementById("lightbox");
+  const img = document.getElementById("lbImg");
+  const counter = document.getElementById("lbCounter");
+
+  if (!lightbox || !img) return;
+
+  lbIndex = index;
+  img.src = window._productoActualImgs[lbIndex];
+
+  actualizarContador();
+
+  lightbox.classList.remove("hidden");
+  lightbox.classList.add("flex");
+};
+
+function cerrarLightbox() {
+  const lightbox = document.getElementById("lightbox");
+  if (!lightbox) return;
+  lightbox.classList.add("hidden");
+  lightbox.classList.remove("flex");
+}
+
+function cambiarLightbox(dir) {
+
+  const imgs = window._productoActualImgs || [];
+  if (!imgs.length) return;
+
+  lbIndex += dir;
+
+  if (lbIndex < 0) lbIndex = imgs.length - 1;
+  if (lbIndex >= imgs.length) lbIndex = 0;
+
+  const img = document.getElementById("lbImg");
+
+  if (img) {
+    img.style.opacity = "0";
+    setTimeout(() => {
+      img.src = imgs[lbIndex];
+      img.style.opacity = "1";
+    }, 150);
+  }
+
+  actualizarContador();
+}
+
+function actualizarContador() {
+  const counter = document.getElementById("lbCounter");
+  const total = window._productoActualImgs?.length || 0;
+  if (counter) {
+    counter.textContent = `${lbIndex + 1} / ${total}`;
+  }
+}
+
+/* ================= EVENTOS ================= */
+
+document.addEventListener("click", e => {
+
+  if (e.target.id === "lbClose" || e.target.id === "lightbox") {
+    cerrarLightbox();
+  }
+
+  if (e.target.id === "lbPrev") {
+    cambiarLightbox(-1);
+  }
+
+  if (e.target.id === "lbNext") {
+    cambiarLightbox(1);
+  }
+
+});
+
+/* ================= TECLADO ================= */
+
+document.addEventListener("keydown", e => {
+
+  const lightbox = document.getElementById("lightbox");
+  if (!lightbox || lightbox.classList.contains("hidden")) return;
+
+  if (e.key === "ArrowLeft") cambiarLightbox(-1);
+  if (e.key === "ArrowRight") cambiarLightbox(1);
+  if (e.key === "Escape") cerrarLightbox();
+
+});
+
+/* ================= SWIPE MÓVIL ================= */
+
+document.addEventListener("touchstart", e => {
+  touchStartX = e.changedTouches[0].screenX;
+});
+
+document.addEventListener("touchend", e => {
+
+  const lightbox = document.getElementById("lightbox");
+  if (!lightbox || lightbox.classList.contains("hidden")) return;
+
+  const diff = e.changedTouches[0].screenX - touchStartX;
+
+  if (diff > 50) cambiarLightbox(-1);
+  if (diff < -50) cambiarLightbox(1);
+
+});
+
+/* =========================================================
+   DESCRIPCIÓN COLAPSABLE (TAB)
+========================================================= */
+
+document.addEventListener("click", e => {
+
+  if (e.target.closest("#btnToggleDescTab")) {
+
+    const resumen = document.getElementById("descResumenTab");
+    const completa = document.getElementById("descCompletaTab");
+    const txt = document.getElementById("txtToggleDesc");
+    const icon = document.getElementById("iconToggleDesc");
+
+    if (!resumen || !completa) return;
+
+    const abierta = !completa.classList.contains("hidden");
+
+    if (abierta) {
+      completa.classList.add("hidden");
+      resumen.classList.remove("hidden");
+      if (txt) txt.textContent = "Ver más";
+      if (icon) icon.classList.remove("rotate-180");
+    } else {
+      completa.classList.remove("hidden");
+      resumen.classList.add("hidden");
+      if (txt) txt.textContent = "Ver menos";
+      if (icon) icon.classList.add("rotate-180");
+    }
+  }
+
+});
+
+document.addEventListener("click", e => {
+
+  if (e.target.id === "btnToggleDesc") {
+
+    const resumen = document.getElementById("descResumen");
+    const completa = document.getElementById("descCompleta");
+    const btn = document.getElementById("btnToggleDesc");
+
+    if (!resumen || !completa || !btn) return;
+
+    const abierta = !completa.classList.contains("hidden");
+
+    if (abierta) {
+      completa.classList.add("hidden");
+      resumen.classList.remove("hidden");
+      btn.textContent = "Más información";
+    } else {
+      completa.classList.remove("hidden");
+      resumen.classList.add("hidden");
+      btn.textContent = "Ver menos";
+    }
+  }
+
+});

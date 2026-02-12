@@ -87,6 +87,7 @@ async function cargarCatalogo() {
         nombre,
         precio,
         categoria,
+        marca,
         catalogo_multimedia(url, tipo)
       `)
       .eq("activo", true);
@@ -94,6 +95,15 @@ async function cargarCatalogo() {
     if (error) throw error;
 
     productosCache = data || [];
+
+    const params = new URLSearchParams(location.search);
+    const marcaFiltro = params.get("marca");
+
+    if (marcaFiltro) {
+      productosCache = productosCache.filter(p =>
+        (p.marca || "").toLowerCase() === marcaFiltro.toLowerCase()
+      );
+    }
 
     renderCategorias(productosCache);
     renderProductos(productosCache);
@@ -131,39 +141,35 @@ function renderProductos(productos) {
         p.catalogo_multimedia?.find(m => m.tipo === "imagen")?.url ||
         "/img/placeholder.png";
 
-      return `
-      <div class="bg-white rounded-xl shadow hover:shadow-xl transition flex flex-col">
+     return `
+      <div class="bg-white rounded-2xl shadow hover:shadow-xl transition flex flex-col group">
 
-        <!-- IMAGEN -->
-        <div
-          class="aspect-square bg-gray-100 overflow-hidden rounded-t-xl cursor-pointer"
-          onclick="location.href='/producto.html?id=${p.id}'"
-        >
+        <div class="aspect-square bg-gray-100 overflow-hidden rounded-t-2xl relative cursor-pointer"
+            onclick="location.href='/producto.html?id=${p.id}'">
+
           <img
             src="${img}"
             class="w-full h-full object-contain
-                   border-b-4 border-yellow-400
-                   transition-transform duration-300 hover:scale-105"
+                  transition-transform duration-300 group-hover:scale-105"
           >
+
         </div>
 
-        <!-- INFO -->
         <div class="p-3 flex flex-col flex-1">
-          <div
-            class="font-semibold text-sm line-clamp-2 cursor-pointer"
-            onclick="location.href='/producto.html?id=${p.id}'"
-          >
+
+          <div class="text-sm font-medium line-clamp-2 cursor-pointer"
+              onclick="location.href='/producto.html?id=${p.id}'">
             ${p.nombre}
           </div>
 
-          <div class="text-green-700 font-bold mt-1">
+          <div class="text-lg font-extrabold text-green-700 mt-2">
             $${p.precio}
           </div>
 
           <button
             class="mt-auto bg-blue-600 hover:bg-blue-700
-                   text-white text-sm py-2 rounded-lg
-                   transition transform active:scale-95"
+                  text-white text-sm py-2 rounded-xl
+                  transition transform active:scale-95"
             onclick='agregarAlCarrito(${JSON.stringify({
               id: p.id,
               nombre: p.nombre,
@@ -171,8 +177,9 @@ function renderProductos(productos) {
               imagen: img
             })}); animarAgregar(this)'
           >
-            Agregar
+            Agregar al carrito
           </button>
+
         </div>
       </div>
       `;

@@ -21,49 +21,43 @@
 
 <body class="bg-gray-100">
 
-<!-- HEADER -->
-<header class="bg-yellow-400 sticky top-0 z-50 shadow">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
+<header class="bg-yellow-400 sticky top-0 z-50 shadow-md">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
 
-    <!-- LOGO + TEXTO -->
-    <div class="flex items-center gap-2 shrink-0">
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 shrink-0">
       <img
         src="/img/logo-peekshop.png"
         alt="PeekShop"
-        class="h-16 object-contain mix-blend-multiply"
+        class="h-14 object-contain mix-blend-multiply"
       >
-      <span class="text-xl font-bold tracking-wide text-gray-900">
+      <span class="text-xl font-extrabold tracking-wide text-gray-900">
         PeekShop
       </span>
-    </div>
+    </a>
 
-    <!-- BUSCADOR -->
+    <!-- Buscador -->
     <div class="flex-1">
       <div class="relative">
         <input
           id="buscador"
           type="text"
-          placeholder="Buscar productos, marcas y más..."
-          class="w-full rounded-sm px-4 py-2 pr-11 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-yellow-600"
+          placeholder="Buscar alimento, juguetes, correas..."
+          class="w-full rounded-full px-5 py-2 pr-12 text-sm
+                 shadow-inner focus:outline-none focus:ring-2 focus:ring-yellow-600"
         >
-
-        <div
-          class="absolute right-3 top-1/2 -translate-y-1/2
-                 text-gray-400 pointer-events-none"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
+        <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">
+          🔍
         </div>
       </div>
     </div>
 
   </div>
 </header>
+
+<div class="bg-green-600 text-white text-xs md:text-sm py-2 text-center">
+  🚚 Envíos en Merida · 🕘 9AM - 9PM · 📲 Atención directa por WhatsApp
+</div>
 
 <!-- ================= ZONA SUPERIOR ================= -->
 <section class="p-3 relative">
@@ -78,6 +72,18 @@
            px-3 py-1 rounded text-sm z-50">
     ✏️ Editar
   </button>
+</section>
+
+
+<section class="px-3 mt-4">
+  <div class="bg-white rounded-2xl shadow p-6 text-center">
+    <h2 class="text-xl md:text-2xl font-bold text-gray-800">
+      Todo para tu mascota 🐶🐱
+    </h2>
+    <p class="text-gray-500 mt-1">
+      Alimento, juguetes, accesorios y más
+    </p>
+  </div>
 </section>
 
 <!-- ================= CATEGORÍAS ================= -->
@@ -175,6 +181,40 @@
 <script type="module" src="/js/carrito.js"></script>
 
 <div id="cart-portal"></div>
+
+<a href="https://wa.me/5219991494268"
+   target="_blank"
+   class="fixed bottom-4 left-4 bg-green-500 hover:bg-green-600
+          text-white p-4 rounded-full shadow-lg z-50
+          text-lg transition hover:scale-110">
+  💬
+</a>
+
+<footer class="bg-gray-900 text-gray-300 text-sm mt-12">
+  <div class="max-w-7xl mx-auto px-4 py-8 grid md:grid-cols-3 gap-6">
+
+    <div>
+      <div class="font-bold text-white mb-2">PeekShop</div>
+      <div>Productos para Mascotas</div>
+      <div class="text-xs mt-2 text-gray-400">
+        Calidad y confianza para tu mejor amigo
+      </div>
+    </div>
+
+    <div>
+      <div class="font-bold text-white mb-2">Contacto</div>
+      <div>WhatsApp: 999 232 8261</div>
+      <div>Horario: 9 AM - 9 PM</div>
+    </div>
+
+    <div>
+      <div class="font-bold text-white mb-2">Envíos</div>
+      <div>Ciudad Caucel</div>
+      <div>Mérida (cotización por WhatsApp)</div>
+    </div>
+
+  </div>
+</footer>
 
 </body>
 </html>

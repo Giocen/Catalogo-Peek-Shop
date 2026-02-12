@@ -293,7 +293,8 @@ window.removeMedia = i => {
 let presentaciones = [];
 
 if (btnAgregarPresentacion) {
-  btnAgregarPresentacion.onclick = () => {
+  btnAgregarPresentacion.onclick = (e) => {
+    e.stopPropagation(); // 🔥 evita que cierre el modal
     presentaciones.push(crearPresentacionBase());
     renderPresentaciones();
   };
@@ -1246,3 +1247,55 @@ if (modalContent) {
   });
 }
 
+const btnIA = document.getElementById("btnIA");
+
+if (btnIA) {
+  btnIA.onclick = async (e) => {
+    e.stopPropagation();
+
+    if (!nombre.value.trim()) {
+      swalWarn("Escribe al menos el nombre del producto");
+      return;
+    }
+
+    swalLoading("Analizando con IA...");
+
+    try {
+      const respuesta = await fetch("https://us-central1-catalogo-peek-shop.cloudfunctions.net/iaProducto", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          nombre: nombre.value,
+          descripcion: descripcion.value,
+          marca: marca.value
+        })
+      });
+
+      const data = await respuesta.json();
+
+      if (!data.ok) {
+        swalError("No se pudo analizar el producto");
+        return;
+      }
+
+      // 🔹 Autocompletar
+      categoria.value = data.categoria || categoria.value;
+      descripcion.value = data.descripcion || descripcion.value;
+
+      if (data.presentaciones?.length) {
+        presentaciones = data.presentaciones;
+        renderPresentaciones();
+      }
+
+      swalOk("Datos completados con IA");
+
+    } catch (err) {
+      console.error(err);
+      swalError("Error con IA");
+    } finally {
+      Swal.close();
+    }
+  };
+}

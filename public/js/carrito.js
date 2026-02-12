@@ -1,6 +1,8 @@
 import { supabase } from "./supabase.js";
 
+
 let carrito = JSON.parse(localStorage.getItem("carrito") || "[]");
+
 
 const portal = document.getElementById("cart-portal");
 const btnCarrito = document.getElementById("btnCarrito");
@@ -12,20 +14,11 @@ const ENVIO_GRATIS_DESDE = 400;
 window.tipoEntrega = "envio"; // envio | tienda
 let envioGratisActivo = false;
 
-// 🔊 Sonido celebración
-const audioEnvioGratis = new Audio(
-  "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"
-);
-audioEnvioGratis.volume = 0.4;
-
 function celebrarEnvioGratis() {
-  // 🎵 sonido
-  audioEnvioGratis.currentTime = 0;
-  audioEnvioGratis.play().catch(() => {});
 
   // 📳 vibración móvil
   if (navigator.vibrate) {
-    navigator.vibrate([100, 50, 100]);
+    navigator.vibrate([120, 60, 120]);
   }
 
   // 🎊 confetti
@@ -159,7 +152,7 @@ function renderPortal() {
       style="
         background:#ffffff;
         width:100%;
-        max-width:420px;
+        max-width:100%;
         height:100%;
         display:flex;
         flex-direction:column;
@@ -354,7 +347,12 @@ function renderPortal() {
   const btn = document.getElementById("btnEnviar");
 
   if (zona === "Caucel") {
-    btn.onclick = pedirDatosCliente;
+    btn.onclick = () => {
+      window._cerrarCarrito();
+      setTimeout(() => {
+        pedirDatosCliente();
+      }, 200);
+    };
   } else {
     btn.onclick = cotizarEnvioMerida;
   }
@@ -383,11 +381,51 @@ function renderItems() {
           <div style="font-weight:600">${p.nombre}</div>
           <div style="color:#16a34a;font-weight:700">$${precio}</div>
 
-          <div style="margin-top:6px;display:flex;gap:8px;align-items:center">
-            <button onclick="_cartMinus('${p.id}','${p.presentacion_id}','${p.color || ""}')">-</button>
-            <strong>${cantidad}</strong>
-            <button onclick="_cartPlus('${p.id}','${p.presentacion_id}','${p.color || ""}')">+</button>
-          </div>
+          <div style="
+            margin-top:8px;
+            display:flex;
+            align-items:center;
+            gap:12px;
+          ">
+
+            <button 
+              onclick="_cartMinus('${p.id}','${p.presentacion_id}','${p.color || ""}')"
+              style="
+                width:36px;
+                height:36px;
+                border-radius:10px;
+                border:none;
+                background:#f1f5f9;
+                font-size:18px;
+                font-weight:bold;
+              ">
+              −
+            </button>
+
+            <div style="
+              min-width:28px;
+              text-align:center;
+              font-weight:700;
+              font-size:16px;
+            ">
+              ${cantidad}
+            </div>
+
+            <button 
+              onclick="_cartPlus('${p.id}','${p.presentacion_id}','${p.color || ""}')"
+              style="
+                width:36px;
+                height:36px;
+                border-radius:10px;
+                border:none;
+                background:#16a34a;
+                color:white;
+                font-size:18px;
+                font-weight:bold;
+              ">
+              +
+            </button>
+
         </div>
 
         <div style="text-align:right">
@@ -496,10 +534,10 @@ window._cerrarSiOverlay = e => {
 };
 
 /* ================= DATOS CLIENTE ================= */
- function pedirDatosCliente() {
+ function pedirDatosCliente(esCompraDirecta = false) {
 
   Swal.fire({
-    title: "Finalizar pedido",
+    title: "Datos de Envío",
     width: 420,
     background: "#ffffff",
     confirmButtonText: "Continuar",
@@ -512,29 +550,49 @@ window._cerrarSiOverlay = e => {
       popup: "animate__animated animate__bounceIn"
     },
     html: `
-      <div style="display:flex;flex-direction:column;gap:12px;margin-top:10px">
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">
 
-        <input id="swal-nombre"
-          class="swal2-input"
-          placeholder="Nombre completo"
-          style="border-radius:14px">
+          <div style="
+            background:#dcfce7;
+            padding:12px;
+            border-radius:14px;
+            font-size:12.5px;
+            color:#166534;
+            line-height:1.5;
+            display:flex;
+            gap:8px;
+            align-items:flex-start;
+          ">
+            <div style="font-size:16px">🔒</div>
+            <div>
+              <strong>Información protegida</strong><br>
+              Tus datos se utilizan únicamente como referencia
+              para la entrega y confirmación del pedido.
+              No compartimos tu información con terceros.
+            </div>
+          </div>
 
-        ${
-          tipoEntrega === "envio"
-            ? `<textarea id="swal-direccion"
-                class="swal2-textarea"
-                placeholder="Dirección completa"
-                style="border-radius:14px"></textarea>`
-            : ""
-        }
+          <input id="swal-nombre"
+            class="swal2-input"
+            placeholder="Nombre completo"
+            style="border-radius:14px">
 
-        <textarea id="swal-referencia"
-          class="swal2-textarea"
-          placeholder="Referencia (opcional)"
-          style="border-radius:14px"></textarea>
+          ${
+            tipoEntrega === "envio"
+              ? `<textarea id="swal-direccion"
+                  class="swal2-textarea"
+                  placeholder="Dirección completa"
+                  style="border-radius:14px"></textarea>`
+              : ""
+          }
 
-      </div>
-    `,
+          <textarea id="swal-referencia"
+            class="swal2-textarea"
+            placeholder="Referencia (opcional)"
+            style="border-radius:14px"></textarea>
+
+        </div>
+      `,
     preConfirm: () => {
       const nombre = document.getElementById("swal-nombre").value.trim();
       const direccion =
@@ -549,9 +607,11 @@ window._cerrarSiOverlay = e => {
 
       return { nombre, direccion };
     }
-  }).then(r => {
-    if (r.isConfirmed) mostrarResumenPedido(r.value);
-  });
+      }).then(r => {
+        if (r.isConfirmed) {
+          mostrarResumenPedido(r.value, esCompraDirecta);
+        }
+      });
 
 }
 
@@ -575,7 +635,9 @@ function enviarWhats(cliente, numeroPedido, totales) {
     msg += `PRODUCTOS\n`;
     msg += `----------------------\n`;
     
-    carrito.forEach(p => {
+    const productos = window._compraTemporal || carrito;
+
+    productos.forEach(p => {
       msg += `${p.nombre}\n`;
       msg += `x${p.cantidad}  $${p.precio * p.cantidad}\n\n`;
     });
@@ -663,6 +725,7 @@ guardar();
 function limpiarCarrito() {
     carrito = [];
     localStorage.removeItem("carrito");
+    localStorage.removeItem("compra_directa");
   
     const badge = document.getElementById("carritoCount");
     if (badge) badge.textContent = "0";
@@ -681,12 +744,12 @@ function limpiarCarrito() {
     return `PK-${y}${m}${d}-${r}`;
   }
 
-  function calcularTotales() {
-  let subtotal = 0;
+    function calcularTotales(productos) {
+    let subtotal = 0;
 
-  carrito.forEach(p => {
-    subtotal += Number(p.precio) * Number(p.cantidad);
-  });
+    productos.forEach(p => {
+      subtotal += Number(p.precio) * Number(p.cantidad);
+    });
 
   const zona = localStorage.getItem("zona_envio") || "Caucel";
 
@@ -709,10 +772,13 @@ function limpiarCarrito() {
   };
 }
   
-  function mostrarResumenPedido(cliente) {
+  function mostrarResumenPedido(cliente, esCompraDirecta = false) {
 
-  const totales = calcularTotales();
+  const totales = calcularTotales();  
   const numeroPedido = generarNumeroPedido();
+  const productos = esCompraDirecta && window._compraTemporal
+    ? window._compraTemporal
+    : carrito;
 
   Swal.fire({
     width: 480,
@@ -735,7 +801,7 @@ function limpiarCarrito() {
           </h3>
         </div>
 
-        ${carrito.map(p => `
+        ${productos.map(p => `
           <div style="
             display:flex;
             align-items:center;
@@ -818,26 +884,21 @@ function limpiarCarrito() {
       subtotal: totales.subtotal,
       envio: totales.envio,
       total: totales.total,
-      productos: carrito
+      productos: window._compraTemporal || carrito
     });
   }
   
 
 /* ================= COMPRA DIRECTA ================= */
-window.comprarAhoraDirecto = producto => {
-    // 🔥 Reemplaza el carrito SOLO para este pedido
-    carrito = [{
-      ...producto,
-      cantidad: 1
-    }];
-  
-    // Guarda para que el flujo existente funcione igual
-    guardar();
-  
-    // Ejecuta el MISMO flujo que el carrito
-    pedirDatosCliente();
-  };
-  
+    window.comprarAhoraDirecto = producto => {
+
+      window._compraTemporal = [{
+        ...producto,
+        cantidad: 1
+      }];
+
+      seleccionarTipoEntregaCompraDirecta();
+    };
 
   // ================= ANIMACIÓN ICONO CARRITO =================
 const style = document.createElement("style");
@@ -943,3 +1004,177 @@ function cotizarEnvioMerida() {
     "_blank"
   );
 }
+
+function seleccionarTipoEntregaCompraDirecta() {
+
+  const ultima = localStorage.getItem("ultima_entrega") || "envio";
+  const producto = window._compraTemporal?.[0];
+
+  if (!producto) return;
+
+  const subtotal = Number(producto.precio) * Number(producto.cantidad);
+  const zona = localStorage.getItem("zona_envio") || "Caucel";
+
+  Swal.fire({
+    width: 430,
+    background: "#ffffff",
+    showConfirmButton: true,
+    confirmButtonText: "Continuar",
+    customClass: {
+      popup: "rounded-3xl shadow-2xl"
+    },
+    showClass: {
+      popup: "animate__animated animate__fadeInUp"
+    },
+    html: `
+      <div style="text-align:left">
+
+        <h3 style="
+          font-weight:800;
+          font-size:18px;
+          margin-bottom:10px;
+          text-align:center;
+        ">
+          ¿Cómo deseas recibir tu pedido?
+        </h3>
+
+        <!-- Producto -->
+        <div style="
+          background:#f8fafc;
+          padding:10px;
+          border-radius:12px;
+          margin-bottom:14px;
+          font-size:14px;
+        ">
+          <strong>${producto.nombre}</strong><br>
+          Subtotal: <strong>$${subtotal}</strong>
+        </div>
+
+        <!-- Toggle -->
+        <div style="
+          display:flex;
+          background:#f1f5f9;
+          border-radius:16px;
+          padding:6px;
+          gap:6px;
+          margin-bottom:14px;
+        ">
+
+          <button id="optEnvio"
+            style="flex:1;padding:12px;border:none;border-radius:12px;font-weight:700;cursor:pointer;">
+            🚚 Envío
+          </button>
+
+          <button id="optTienda"
+            style="flex:1;padding:12px;border:none;border-radius:12px;font-weight:700;cursor:pointer;">
+            🏪 Recoger
+          </button>
+
+        </div>
+
+        <!-- Costo estimado -->
+        <div id="costoEstimado"
+          style="
+            background:linear-gradient(135deg,#dcfce7,#bbf7d0);
+            padding:14px;
+            border-radius:18px;
+            font-size:14px;
+            font-weight:700;
+            text-align:center;
+            box-shadow:0 6px 20px rgba(0,0,0,.08);
+            transition:.3s;
+          ">
+        </div>
+
+      </div>
+    `,
+    didOpen: () => {
+
+      const btnEnvio = document.getElementById("optEnvio");
+      const btnTienda = document.getElementById("optTienda");
+      const costoBox = document.getElementById("costoEstimado");
+
+      let seleccion = ultima;
+
+      function calcularEnvio() {
+
+          const ahora = new Date();
+          const hora = ahora.getHours();
+          const dentroHorario = hora >= 9 && hora < 21;
+
+          let mensajeHorario = dentroHorario
+            ? "Entrega estimada: Hoy mismo 🚀"
+            : "Entrega estimada: Mañana 🕘";
+
+          if (seleccion === "tienda") {
+            return {
+              texto: `Recoger en tienda — GRATIS 🏪<br><small>${mensajeHorario}</small>`,
+              envio: 0
+            };
+          }
+
+          if (zona !== "Caucel") {
+            return {
+              texto: `Envío se cotiza por WhatsApp 📲<br><small>${mensajeHorario}</small>`,
+              envio: 0
+            };
+          }
+
+          if (subtotal >= 400) {
+            return {
+              texto: `🚚 Envío GRATIS desbloqueado<br><small>${mensajeHorario}</small>`,
+              envio: 0
+            };
+          }
+
+          return {
+            texto: `Costo estimado de envío: $25<br><small>${mensajeHorario}</small>`,
+            envio: 25
+          };
+        }
+
+      function actualizarUI() {
+
+        btnEnvio.style.background =
+          seleccion === "envio" ? "#16a34a" : "transparent";
+        btnEnvio.style.color =
+          seleccion === "envio" ? "white" : "#334155";
+
+        btnTienda.style.background =
+          seleccion === "tienda" ? "#16a34a" : "transparent";
+        btnTienda.style.color =
+          seleccion === "tienda" ? "white" : "#334155";
+
+        const envioInfo = calcularEnvio();
+
+        costoBox.innerHTML = `
+          ${envioInfo.texto}<br>
+          Total estimado: <strong>$${subtotal + envioInfo.envio}</strong>
+        `;
+      }
+
+      btnEnvio.onclick = () => {
+        seleccion = "envio";
+        actualizarUI();
+      };
+
+      btnTienda.onclick = () => {
+        seleccion = "tienda";
+        actualizarUI();
+      };
+
+      actualizarUI();
+
+      Swal.getConfirmButton().onclick = () => {
+        tipoEntrega = seleccion;
+        localStorage.setItem("ultima_entrega", seleccion);
+        Swal.close();
+
+        setTimeout(() => {
+          pedirDatosCliente(true);
+        }, 200);
+      };
+    }
+  });
+}
+
