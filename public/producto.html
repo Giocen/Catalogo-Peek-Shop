@@ -13,6 +13,8 @@
 
   <!-- Estilos cliente -->
   <link rel="stylesheet" href="/styles/cliente.css">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css"/>
 </head>
 
 <body class="bg-gray-100">
@@ -85,12 +87,39 @@
 </div>
 
 <!-- ================= BOTÓN CARRITO ================= -->
-<button
-  id="btnCarrito"
-  class="fixed bottom-5 right-5 bg-green-600 hover:bg-green-700
-         text-white px-5 py-4 rounded-full shadow-xl z-50"
->
-  🛒 <span id="carritoCount">0</span>
+<!-- BOTÓN CARRITO FLOTANTE -->
+<button id="btnCarrito"
+  style="
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:linear-gradient(135deg,#22c55e,#16a34a);
+    color:white;
+    border:none;
+    border-radius:50%;
+    width:60px;
+    height:60px;
+    box-shadow:0 8px 20px rgba(22,163,74,.4);
+    font-size:22px;
+    cursor:pointer;
+    z-index:9999;
+  ">
+  🛒
+  <span id="carritoCount"
+    style="
+      position:absolute;
+      top:-6px;
+      right:-6px;
+      background:#ef4444;
+      color:white;
+      font-size:11px;
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    ">0</span>
 </button>
 
 <!-- PORTAL CARRITO -->

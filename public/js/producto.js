@@ -410,18 +410,51 @@ function activarBotones(p, imgBase) {
       e.target.id !== "btnComprarAhora"
     ) return;
 
-    if (!window._presentacionSeleccionada) {
-      alert("Selecciona una presentación");
-      return;
-    }
+  if (!window._presentacionSeleccionada) {
 
+  Swal.fire({
+    icon: "warning",
+    title: "Selecciona una presentación",
+    text: "Elige una opción antes de continuar",
+    confirmButtonText: "Entendido",
+    confirmButtonColor: "#16a34a",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    showClass: {
+      popup: "animate__animated animate__bounceIn"
+    },
+    hideClass: {
+      popup: "animate__animated animate__fadeOut"
+    }
+  });
+
+  const variantes = document.querySelector(".variantes");
+
+  if (variantes) {
+
+    // 🔹 Scroll suave
+    variantes.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    // 🔹 Micro animación visual
+    variantes.classList.add("ring-2", "ring-red-400", "animate-pulse");
+
+    setTimeout(() => {
+      variantes.classList.remove("ring-2", "ring-red-400", "animate-pulse");
+    }, 1200);
+  }
+
+  return;
+}
     agregarAlCarrito({
       id: p.id,
+      presentacion_id: window._presentacionSeleccionada.id,
       nombre: p.nombre,
       precio: window._presentacionSeleccionada.precio,
       imagen: imgBase,
-      presentacion:
-        `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
+      presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
       color: window._colorSeleccionado || null
     });
   });
