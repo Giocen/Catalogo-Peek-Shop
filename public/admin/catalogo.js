@@ -1,6 +1,14 @@
 import { auth } from "../js/firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { supabase } from "../js/supabase.js";
+import { analizarProductoLocal } from "./producto.ia.js";
+import { guardarProducto } from "./producto.save.js";
+import {
+  getPresentaciones,
+  setPresentaciones,
+  crearPresentacionBase,
+  renderPresentaciones
+} from "./producto.presentaciones.js";
 
 
 // ================= DEBOUNCE =================
@@ -161,19 +169,86 @@ let codigoDuplicado = false;
 let guardando = false;
 
 /* ================= MEDIA ================= */
-function procesarArchivoMedia(file) {
-  if (!file) return;
+    function procesarArchivoMedia(file) {
+      if (!file) return;
 
-  const reader = new FileReader();
-  const tipo = file.type.startsWith("video") ? "video" : "image";
+      const tipo = file.type.startsWith("video") ? "video" : "image";
 
-  reader.onload = () => {
-    media.push({ url: reader.result, tipo, file });
-    renderMedia();
-  };
+      // 🎥 Si es video no tocamos nada
+      if (tipo === "video") {
+        const reader = new FileReader();
+        reader.onload = () => {
+          media.push({
+            url: reader.result,
+            tipo,
+            file
+          });
+          renderMedia();
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
 
-  reader.readAsDataURL(file);
-}
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        img.src = reader.result;
+      };
+
+      img.onload = () => {
+
+        const SIZE = 1200; // 📏 tamaño final
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+
+        // 🎨 Fondo blanco
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, SIZE, SIZE);
+
+        // 📐 Calcular escala manteniendo proporción
+        const scale = Math.min(SIZE / img.width, SIZE / img.height);
+        const newWidth = img.width * scale;
+        const newHeight = img.height * scale;
+
+        // 📍 Centrar imagen
+        const x = (SIZE - newWidth) / 2;
+        const y = (SIZE - newHeight) / 2;
+
+        ctx.drawImage(img, x, y, newWidth, newHeight);
+
+        // 📦 Convertir a JPG optimizado
+        canvas.toBlob((blob) => {
+
+          const archivoFinal = new File(
+            [blob],
+            file.name.replace(/\.\w+$/, ".jpg"),
+            { type: "image/jpeg" }
+          );
+
+          const readerFinal = new FileReader();
+
+          readerFinal.onload = () => {
+            media.push({
+              url: readerFinal.result,
+              tipo: "image",
+              file: archivoFinal
+            });
+
+            renderMedia();
+          };
+
+          readerFinal.readAsDataURL(archivoFinal);
+
+        }, "image/jpeg", 0.92); // calidad optimizada
+      };
+
+      reader.readAsDataURL(file);
+    }
+
 
 /* ================= COLORES BASE ================= */
 const baseColors = [
@@ -289,226 +364,6 @@ window.removeMedia = i => {
   renderMedia();
 };
 
-/* ================= PRESENTACIONES ================= */
-let presentaciones = [];
-
-if (btnAgregarPresentacion) {
-  btnAgregarPresentacion.onclick = (e) => {
-    e.stopPropagation(); // 🔥 evita que cierre el modal
-    presentaciones.push(crearPresentacionBase());
-    renderPresentaciones();
-  };
-}
-
-
-function crearPresentacionBase() {
-  return {
-    nombre: "",
-    unidad: "pieza",
-    cantidad: 1,
-    talla: "",
-    costo: "",
-    precio: "",
-    precio_oferta: "",
-    en_oferta: false,
-    margen: 0,
-    stock: 0,
-    activo: true,
-    sku: "",
-    detalle: ""
-  };
-}
-
-/* 🔧 CÁLCULO DE MARGEN */
-function calcularMargen(p) {
-  const costo = Number(p.costo);
-  const precio = Number(p.precio);
-
-  if (costo > 0 && precio > 0) {
-    p.margen = Number((((precio - costo) / costo) * 100).toFixed(2));
-  } else {
-    p.margen = 0;
-  }
-}
-
-function renderPresentaciones() {
-
-  if (!presentaciones.length) {
-    presentacionesDiv.innerHTML = `
-      <div class="text-sm text-slate-400 italic">
-        Este producto aún no tiene presentaciones.
-        Agrega al menos una para poder venderlo.
-      </div>
-    `;
-    return;
-  }
-
-  presentacionesDiv.innerHTML = presentaciones.map((p, i) => {
-
-    calcularMargen(p);
-
-    return `
-      <div class="border rounded p-4 space-y-2 bg-gray-50">
-
-        <input class="input" placeholder="Nombre (Collar, Bulto 20kg)"
-          value="${p.nombre}"
-          data-index="${i}"
-          onchange="actualizarCampoPresentacion(this,'nombre')">
-
-          <input class="input text-sm"
-          placeholder="Detalle corto (opcional) · Ej. Tabletas masticables"
-          value="${p.detalle || ""}"
-          data-index="${i}"
-          onchange="actualizarCampoPresentacion(this,'detalle')">
-
-        <div class="grid grid-cols-2 gap-2">
-
-          <div>
-            <label class="text-xs text-slate-500">Unidad</label>
-            <select class="input"
-              onchange="window.actualizarCampoPresentacion(this,'unidad')"
-              data-index="${i}">
-              <option ${p.unidad==="pieza"?"selected":""}>pieza</option>
-              <option ${p.unidad==="kilo"?"selected":""}>kilo</option>
-              <option ${p.unidad==="bulto"?"selected":""}>bulto</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-500">Variante / Tamaño</label>
-            <input class="input"
-              placeholder="Ej. 5 kg, Grande"
-              value="${p.talla}"
-              onchange="window.actualizarCampoPresentacion(this,'talla')"
-              data-index="${i}">
-          </div>
-
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <input type="number" class="input" placeholder="Costo"
-            value="${p.costo}"
-            data-index="${i}"
-            oninput="actualizarCampoPresentacion(this,'costo')">
-
-          <input type="number" class="input" placeholder="Precio venta"
-            value="${p.precio}"
-            data-index="${i}"
-            oninput="actualizarCampoPresentacion(this,'precio')">
-        </div>
-
-        <div class="text-xs text-gray-600 info-margen">
-          Ganancia:
-          <b>$${((Number(p.precio) - Number(p.costo)) || 0)}</b> |
-          Margen:
-          <b>${p.margen}%</b>
-        </div>
-
-        <div class="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            ${p.en_oferta ? "checked" : ""}
-            onchange="window.actualizarCampoPresentacion(this,'en_oferta')"
-            data-index="${i}">
-          <span class="cursor-help"
-            title="Activa un precio especial para esta presentación">
-            En oferta
-          </span>
-        </div>
-
-        ${p.en_oferta ? `
-          <input type="number" class="input" placeholder="Precio oferta"
-            value="${p.precio_oferta}"
-            onchange="actualizarCampoPresentacion(this,'precio_oferta')"
-data-index="${i}"
->
-        ` : ""}
-
-        <div class="grid grid-cols-2 gap-2">
-          <input type="number" class="input" placeholder="Stock"
-            value="${p.stock}"
-            onchange="actualizarCampoPresentacion(this,'stock')"
-data-index="${i}"
->
-
-          <div class="flex items-center gap-2 text-sm">
-            <input type="checkbox"
-              ${p.activo ? "checked" : ""}
-              onchange="window.actualizarCampoPresentacion(this,'activo')"
-              data-index="${i}">
-            <span class="cursor-help"
-              title="Si se desactiva, esta presentación no se vende">
-              Activa
-            </span>
-          </div>
-        </div>
-
-        <button onclick="eliminarPresentacion(${i})"
-          class="text-red-600 text-sm">Eliminar</button>
-
-      </div>
-    `;
-  }).join("");
-}
-
-window.eliminarPresentacion = i => {
-  presentaciones.splice(i, 1);
-  renderPresentaciones();
-};
-
-
-/* ===================================================== */
-/* 🔥 MOTOR INTELIGENTE LOCAL (PONER AQUÍ) */
-/* ===================================================== */
-
-function analizarProductoLocal({ nombre, descripcion, marca }) {
-
-  const texto = `${nombre} ${descripcion} ${marca}`.toLowerCase();
-
-  let categoriaDetectada = null;
-  let unidadDetectada = "pieza";
-  let tallaDetectada = "";
-  let nombrePresentacion = "General";
-
-  if (/croqueta|alimento|dog chow|pro plan|nupec|royal canin/.test(texto)) {
-    categoriaDetectada = "Alimentos";
-  }
-
-  if (/collar|correa|pechera/.test(texto)) {
-    categoriaDetectada = "Accesorios";
-  }
-
-  if (/juguete|pelota|mordedera/.test(texto)) {
-    categoriaDetectada = "Juguetes";
-  }
-
-  const kgMatch = texto.match(/(\d+)\s?(kg|kilo|kilos)/);
-
-  if (kgMatch) {
-    unidadDetectada = "bulto";
-    tallaDetectada = `${kgMatch[1]} kg`;
-    nombrePresentacion = `Bulto ${kgMatch[1]}kg`;
-  }
-
-  return {
-    categoria: categoriaDetectada,
-    descripcion: descripcion || "",
-    presentaciones: [{
-      nombre: nombrePresentacion,
-      unidad: unidadDetectada,
-      cantidad: 1,
-      talla: tallaDetectada,
-      costo: "",
-      precio: "",
-      precio_oferta: "",
-      en_oferta: false,
-      margen: 0,
-      stock: 0,
-      activo: true,
-      detalle: ""
-    }]
-  };
-}
 
 /* ================= VALIDACIONES ================= */
 function validar() {
@@ -518,6 +373,7 @@ function validar() {
     return false;
   }
 
+  const presentaciones = getPresentaciones();
   if (!presentaciones.length) {
     swalWarn("El producto debe tener al menos una presentación");
     return false;
@@ -550,7 +406,8 @@ function generarSKU(p) {
 
 function obtenerPrecioBase() {
   let min = null;
-
+ 
+  const presentaciones = getPresentaciones();
   for (const p of presentaciones) {
     if (!p.activo) continue;
     const precio = p.en_oferta && p.precio_oferta
@@ -621,11 +478,13 @@ function quitarAvisoCodigo() {
 
  /* ================= GUARDAR ================= */
 if (btnGuardar) btnGuardar.onclick = async () => {
+
   if (guardando) return;
   guardando = true;
   btnGuardar.disabled = true;
 
   try {
+
     if (!validar()) return;
 
     if (codigoDuplicado) {
@@ -633,199 +492,59 @@ if (btnGuardar) btnGuardar.onclick = async () => {
       codigo.focus();
       return;
     }
-    
+
     swalLoading("Guardando producto...");
 
-          const precioBase = obtenerPrecioBase();
-          if (precioBase === null) {
-            swalWarn("Debes capturar al menos un precio válido");
-            throw new Error("Validación");
-          }          
-          
-          // 🔒 respaldo de precio al editar
-          let precioFinal = precioBase;
-
-          if (!precioFinal && productoActual) {
-            const { data: prodActual, error } = await supabase
-              .from("catalogo_productos")
-              .select("precio")
-              .eq("id", productoActual)
-              .single();
-          
-            if (error || prodActual?.precio == null) {
-              swalError("No se pudo recuperar el precio actual del producto");
-              throw new Error("Validación");
-            }
-          
-            precioFinal = prodActual.precio;
-          }
-          
-          if (precioFinal == null || isNaN(precioFinal)) {
-            swalError("El producto debe tener un precio válido");
-            throw new Error("Validación");
-          }
-          
-      
-          const payload = {
-            codigo: codigo.value.trim() || null,
-            nombre: nombre.value.trim(),
-            marca: marca.value.trim() || null,
-            descripcion: descripcion.value.trim(),
-            categoria: categoriaNueva.value || categoria.value,
-            precio: Number(precioFinal), 
-            es_oferta: es_oferta.checked,
-            activo: activo.checked,
-            notas: notas.value,
-            colores: colores.map(c => c.hex)
-          };
-
-    
-
-    let productoId = productoActual;
-
-    /* 🔁 EDITAR PRODUCTO */
-    if (productoActual) {
-      const { error } = await supabase
-        .from("catalogo_productos")
-        .update(payload)
-        .eq("id", productoActual);
-
-      if (error) {
-        swalError(error.message);
-        return;
-      }
-
-      // 🧹 borrar presentaciones anteriores
-      
-      //if (productoActual && presentaciones.length) {
-       // const { error: errDel } = await supabase
-        //  .from("catalogo_presentaciones")
-        //  .delete()
-         // .eq("producto_id", productoActual);
-      
-      //  if (errDel) {
-        //  swalError("No se pudieron borrar las presentaciones anteriores");
-        //  console.error(errDel);
-        //  return; // ⛔ detener guardado
-       // }
-     // }
-
-      
-
-    }
-    /* ➕ NUEVO PRODUCTO */
-    else {
-      const { data, error } = await supabase
-        .from("catalogo_productos")
-        .insert(payload)
-        .select()
-        .single();
-
-      if (error) {
-        swalError(error.message);
-        return;
-      }
-
-      productoId = data.id;
+    const precioBase = obtenerPrecioBase();
+    if (precioBase === null) {
+      swalWarn("Debes capturar al menos un precio válido");
+      throw new Error("Validación");
     }
 
+    const payload = {
+      codigo: codigo.value.trim() || null,
+      nombre: nombre.value.trim(),
+      marca: marca.value.trim() || null,
+      descripcion: descripcion.value.trim(),
+      categoria: categoriaNueva.value || categoria.value,
+      precio: Number(precioBase),
+      es_oferta: es_oferta.checked,
+      activo: activo.checked,
+      notas: notas.value,
+      colores: colores.map(c => c.hex)
+    };
 
-// 🧹 BORRAR PRESENTACIONES ANTERIORES (ANTES DE INSERTAR)
-if (productoActual) {
-  const { error: errDel } = await supabase
-  .from("catalogo_presentaciones")
-  .delete()
-  .eq("producto_id", productoActual)
-  .select();
-
-  if (errDel) {
-    swalError("No se pudieron borrar las presentaciones anteriores");
-    throw new Error("Validación");
-  }
-}
-
-
-    /* 📦 GUARDAR PRESENTACIONES */
-  for (const p of presentaciones) {
-  const { error } = await supabase
-    .from("catalogo_presentaciones")
-    .insert({
-      producto_id: productoId,
-      nombre: p.nombre,
-      unidad: p.unidad,
-      cantidad: p.cantidad,
-      talla: p.talla || null,
-      costo: Number(p.costo),
-      precio: Number(p.precio),
-      precio_oferta: p.en_oferta ? Number(p.precio_oferta) : null,
-      en_oferta: p.en_oferta,
-      margen: p.margen,
-      stock: p.stock,
-      activo: p.activo,
-      sku: generarSKU(p),
-      detalle: p.detalle || null
+   const productoId = await guardarProducto({
+      supabase,
+      productoActual,
+      payload,
+      presentaciones: getPresentaciones(),
+      media,
+      generarSKU,
+      obtenerPrecioBase,
+      subirMediaSupabase,
+      swalError
     });
 
-  if (error) {
-    swalError("Error al guardar presentaciones");
-    console.error(error);
-    throw new Error("Validación");
-  }
-}
-
-
-
-
-
-    /* 🖼️ MULTIMEDIA */
-    // borrar multimedia previa
-    const tieneArchivosNuevos = media.some(m => m.file);
-
-    if (tieneArchivosNuevos) {
-      await supabase
-        .from("catalogo_multimedia")
-        .delete()
-        .eq("producto_id", productoId);
-    }
-    
-
-      try {
-        for (let i = 0; i < media.length; i++) {
-          const m = media[i];
-      
-          if (!m.file) continue;
-      
-          const url = await subirMediaSupabase(m.file, productoId, i);        
-         
-      
-          await supabase.from("catalogo_multimedia").insert({
-            producto_id: productoId,
-            tipo: m.tipo === "image" ? "imagen" : "video",
-            url,
-            orden: i
-          });
-        }
-      } catch (err) {
-        swalError("Error al subir imágenes. El producto se guardó, pero la imagen no.");
-        console.error("ERROR IMAGEN:", err);
-        return;
-      }
-      
-    swalOk("Producto guardado correctamente");    
+    swalOk("Producto guardado correctamente");
     cerrar();
     cargar();
 
+
   } catch (err) {
+
     if (err.message !== "Validación") {
       console.error(err);
       swalError("Ocurrió un error inesperado al guardar el producto");
     }
+
   } finally {
     Swal.close();
     guardando = false;
     btnGuardar.disabled = false;
   }
 };
+
 
 /* ================= UI ================= */
 if (btnNuevo) btnNuevo.onclick = () => {
@@ -853,26 +572,36 @@ if (btnNuevo) btnNuevo.onclick = () => {
   document.getElementById("tituloModal").textContent =
     "🧾 Nuevo producto";
 
-  // 📦 presentación base
-  presentaciones = [{
-    ...crearPresentacionBase(),
-    nombre: "General"
-  }];
+  setPresentaciones([{
+  ...crearPresentacionBase(),
+  nombre: "General"
+}]);
+
 
   // ✅ funciones CORRECTAS
   renderMedia();
   renderColores();
   renderStock();
-  renderPresentaciones();
+  renderPresentaciones(presentacionesDiv);
 
   modal.classList.remove("hidden");
+  history.pushState({ modalAbierto: true }, "");
+
 
   setTimeout(() => dropZone.focus(), 100);
 };
 
 
 window.cerrar = () => {
-  modal.classList.add("hidden");
+
+  if (!modal.classList.contains("hidden")) {
+    modal.classList.add("hidden");
+
+    if (history.state?.modalAbierto) {
+      history.back(); // 👈 regresamos un paso sin salir
+    }
+  }
+
   productoActual = null;
   media = [];
   colores = [];
@@ -881,6 +610,7 @@ window.cerrar = () => {
   renderColores();
   renderStock();
 };
+
 
 
 /* ================= LISTA ================= */
@@ -939,29 +669,18 @@ window.dropMedia = e => {
 
 /* 🔑 ACTUALIZAR CAMPOS PRESENTACIÓN */
 window.actualizarCampoPresentacion = (el, campo) => {
-  const i = Number(el.dataset.index);
-  if (!presentaciones[i]) return;
 
-  presentaciones[i][campo] =
+  const i = Number(el.dataset.index);
+
+  const lista = getPresentaciones();
+  if (!lista[i]) return;
+
+  lista[i][campo] =
     el.type === "checkbox" ? el.checked : el.value;
 
-  if (campo === "costo" || campo === "precio") {
-    calcularMargen(presentaciones[i]);
+  setPresentaciones(lista);
 
-    // 🔄 solo actualiza el texto de margen/ganancia
-    const contenedor = el.closest(".border");
-    if (contenedor) {
-      const info = contenedor.querySelector(".info-margen");
-      if (info) {
-        info.innerHTML = `
-          Ganancia:
-          <b>$${((Number(presentaciones[i].precio) - Number(presentaciones[i].costo)) || 0)}</b>
-          | Margen:
-          <b>${presentaciones[i].margen}%</b>
-        `;
-      }
-    }
-  }
+  renderPresentaciones(presentacionesDiv);
 };
 
 /* ================= EDITAR ================= */
@@ -1043,7 +762,7 @@ modal.classList.remove("hidden");
     .select("*")
     .eq("producto_id", id);
 
-  presentaciones = (pres || []).map(p => ({
+  setPresentaciones((pres || []).map(p => ({
     nombre: p.nombre || "",
     unidad: p.unidad,
     cantidad: p.cantidad,
@@ -1057,10 +776,10 @@ modal.classList.remove("hidden");
     activo: p.activo,
     sku: p.sku,
     detalle: p.detalle || ""
+  })));
 
-  }));
+  renderPresentaciones(presentacionesDiv);
 
-  renderPresentaciones();
 
   // ================= ABRIR MODAL =================
   modal.classList.remove("hidden");
@@ -1304,102 +1023,89 @@ if (modalContent) {
 /* ===================================================== */
 /* 🧠 BOTÓN IA HÍBRIDA (OpenAI + Fallback Local) */
 /* ===================================================== */
+    const btnIA = document.getElementById("btnIA");
+    const textoCompletoIA = document.getElementById("textoCompletoIA");
 
-const btnIA = document.getElementById("btnIA");
+    if (btnIA) {
+      btnIA.onclick = async (e) => {
+        e.stopPropagation();
 
-if (btnIA) {
-  btnIA.onclick = async (e) => {
-    e.stopPropagation();
+        // 🔥 Determinar qué texto usar
+        const textoParaIA = textoCompletoIA?.value?.trim()
+          ? textoCompletoIA.value
+          : `${nombre.value} ${descripcion.value} ${marca.value}`;
 
-    if (!nombre.value.trim()) {
-      swalWarn("Escribe al menos el nombre del producto");
-      return;
-    }
+        if (!textoParaIA.trim()) {
+          swalWarn("Escribe nombre o pega información del producto");
+          return;
+        }
 
-    swalLoading("Analizando con IA...");
+        swalLoading("Analizando con IA...");
 
-    let data = null;
-    let usoLocal = false;
+        let data = null;
+        let usoLocal = false;
 
-    try {
-      /* ============================
-         1️⃣ INTENTA OPENAI
-      ============================ */
+        try {
 
-      const respuesta = await fetch(
-        "https://us-central1-catalogo-peek-shop.cloudfunctions.net/iaProducto",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+          const respuesta = await fetch(
+            "https://us-central1-catalogo-peek-shop.cloudfunctions.net/iaProducto",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                textoCompleto: textoParaIA
+              })
+            }
+          );
+
+          if (!respuesta.ok) throw new Error("IA remota falló");
+
+          const result = await respuesta.json();
+
+          if (!result.ok) throw new Error("IA respondió sin éxito");
+
+          data = result;
+
+        } catch (err) {
+
+          console.warn("⚠️ IA remota falló, usando modo local...");
+          usoLocal = true;
+
+          data = analizarProductoLocal({
             nombre: nombre.value,
             descripcion: descripcion.value,
             marca: marca.value
-          })
+          });
         }
-      );
 
-      if (!respuesta.ok) {
-        throw new Error("IA remota falló");
-      }
+        try {
 
-      const result = await respuesta.json();
+          if (data.nombre) nombre.value = data.nombre;
+          if (data.marca) marca.value = data.marca;
+          if (data.descripcion) descripcion.value = data.descripcion;
+          if (data.categoria) categoria.value = data.categoria;
 
-      if (!result.ok) {
-        throw new Error("IA respondió sin éxito");
-      }
+          if (data.presentaciones?.length) {
+            setPresentaciones(data.presentaciones);
+            renderPresentaciones(presentacionesDiv);
+          }
 
-      data = result;
+          if (usoLocal) {
+            swalOk("Sugerencias generadas (modo rápido)");
+          } else {
+            swalOk("Datos completados con IA avanzada");
+          }
 
-    } catch (err) {
-
-      console.warn("⚠️ IA remota falló, usando modo local...");
-      usoLocal = true;
-
-      /* ============================
-         2️⃣ FALLBACK LOCAL
-      ============================ */
-
-      data = analizarProductoLocal({
-        nombre: nombre.value,
-        descripcion: descripcion.value,
-        marca: marca.value
-      });
+        } catch (err) {
+          console.error(err);
+          swalError("Error procesando datos IA");
+        } finally {
+          Swal.close();
+        }
+      };
     }
 
-    /* ============================
-       3️⃣ AUTOCOMPLETAR
-    ============================ */
 
-    try {
-
-      if (data.categoria) {
-        categoria.value = data.categoria;
-      }
-
-      if (data.descripcion) {
-        descripcion.value = data.descripcion;
-      }
-
-      if (data.presentaciones?.length) {
-        presentaciones = data.presentaciones;
-        renderPresentaciones();
-      }
-
-      if (usoLocal) {
-        swalOk("Sugerencias generadas (modo rápido)");
-      } else {
-        swalOk("Datos completados con IA avanzada");
-      }
-
-    } catch (err) {
-      console.error(err);
-      swalError("Error procesando datos IA");
-    } finally {
-      Swal.close();
-    }
-  };
-}
 
 /* ===================================================== */
 /* ⚡ BOTÓN IA LOCAL (GRATIS) */
@@ -1434,7 +1140,7 @@ if (btnIALocal) {
       }
 
       if (data.presentaciones?.length) {
-        presentaciones = data.presentaciones;
+        setPresentaciones(data.presentaciones);
         renderPresentaciones();
       }
 
@@ -1449,52 +1155,196 @@ if (btnIALocal) {
 }
 
 
+/* ===================================================== */
+/* 📸 FOTO INTELIGENTE + GOOGLE LENS (VERSIÓN ESTABLE) */
+/* ===================================================== */
+
 const btnFotoIA = document.getElementById("btnFotoIA");
 const btnBuscarLens = document.getElementById("btnBuscarLens");
 const inputCamaraIA = document.getElementById("inputCamaraIA");
 
+/* =========================
+   📸 BOTÓN TOMAR FOTO
+========================= */
 if (btnFotoIA) {
-  btnFotoIA.onclick = () => {
-    inputCamaraIA.click();
-  };
+
+  btnFotoIA.addEventListener("click", function (e) {
+
+    e.preventDefault();
+
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    if (isAndroid) {
+      window.location.href =
+        "intent://lens.google.com/#Intent;scheme=https;package=com.google.ar.lens;end";
+    } else {
+      window.open("https://lens.google.com/", "_blank");
+    }
+
+  });
+
 }
 
-if (btnBuscarLens) {
-  btnBuscarLens.onclick = () => {
-    if (!nombre.value.trim()) {
-      swalWarn("Escribe al menos el nombre para buscar");
+
+/* =========================
+   📷 CUANDO SE TOMA FOTO
+========================= */
+if (inputCamaraIA) {
+
+  inputCamaraIA.addEventListener("change", async (e) => {
+
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      console.log("No se capturó archivo");
       return;
     }
 
-    const query = encodeURIComponent(nombre.value);
-    window.open(`https://lens.google.com/uploadbyurl?url=${query}`, "_blank");
-  };
+    console.log("Archivo capturado:", file);
+
+    swalLoading("Procesando imagen...");
+
+
+    // 🔥 Quitar fondo primero
+      let archivoFinal = file;
+
+          try {
+
+        procesarArchivoMedia(file);
+
+        inputCamaraIA.value = "";
+
+        const sugerencia = analizarProductoLocal({
+          nombre: nombre.value,
+          descripcion: descripcion.value,
+          marca: marca.value
+        });
+
+        if (sugerencia.categoria) {
+          categoria.value = sugerencia.categoria;
+        }
+
+        if (sugerencia.presentaciones?.length) {
+          setPresentaciones(sugerencia.presentaciones);
+          renderPresentaciones(presentacionesDiv);
+        }
+
+
+        swalOk("Imagen agregada correctamente");
+
+      } catch (err) {
+        console.error(err);
+        swalError("Error procesando imagen");
+      }
+
+  });
+
 }
 
-if (inputCamaraIA) {
-  inputCamaraIA.onchange = async () => {
-    const file = inputCamaraIA.files[0];
-    if (!file) return;
+/* =========================
+   🔎 BOTÓN GOOGLE LENS
+========================= */
 
-    // 🔹 Solo la agregamos normal
-    procesarArchivoMedia(file);
+if (btnBuscarLens) {
 
-    // 🔹 Motor inteligente local
-    const sugerencia = analizarProductoLocal({
-      nombre: nombre.value,
-      descripcion: descripcion.value,
-      marca: marca.value
-    });
+  btnBuscarLens.addEventListener("click", function (e) {
 
-    if (sugerencia.categoria) {
-      categoria.value = sugerencia.categoria;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!media.length) {
+      swalWarn("Primero toma o agrega una imagen");
+      return;
     }
 
-    if (sugerencia.presentaciones?.length) {
-      presentaciones = sugerencia.presentaciones;
-      renderPresentaciones();
+    const img = media[0];
+
+    // 🔥 Si la imagen es base64 (foto recién tomada)
+    if (img.url.startsWith("data:image")) {
+
+      swalWarn("Primero guarda el producto para subir la imagen y poder usar Google Lens.");
+      return;
     }
 
-    swalOk("Imagen agregada y datos sugeridos");
+    // 🔥 Si ya es URL pública
+    if (img.url.startsWith("http")) {
+
+      const url = encodeURIComponent(img.url);
+
+      window.open(
+        `https://lens.google.com/uploadbyurl?url=${url}`,
+        "_blank"
+      );
+
+      return;
+    }
+
+    swalWarn("La imagen aún no está disponible para Google Lens.");
+
+  });
+
+}
+
+
+/* ===================================================== */
+/* 📝 ANALIZAR TEXTO COMPLETO PEGADO */
+/* ===================================================== */
+
+const btnAnalizarTextoIA = document.getElementById("btnAnalizarTextoIA");
+
+
+if (btnAnalizarTextoIA) {
+
+  btnAnalizarTextoIA.onclick = async () => {
+
+    if (!textoCompletoIA.value.trim()) {
+      swalWarn("Pega primero la información del producto");
+      return;
+    }
+
+    swalLoading("Analizando texto completo...");
+
+    try {
+
+      const respuesta = await fetch(
+        "https://us-central1-catalogo-peek-shop.cloudfunctions.net/iaProducto",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            textoCompleto: textoCompletoIA.value
+          })
+        }
+      );
+
+      if (!respuesta.ok) throw new Error();
+
+      const result = await respuesta.json();
+
+      if (!result.ok) throw new Error();
+
+      // 🔥 AUTOCOMPLETAR CAMPOS
+
+      if (result.nombre) nombre.value = result.nombre;
+      if (result.marca) marca.value = result.marca;
+      if (result.descripcion) descripcion.value = result.descripcion;
+      if (result.categoria) categoria.value = result.categoria;
+
+      if (result.presentaciones?.length) {
+        setPresentaciones(result.presentaciones);
+        renderPresentaciones(presentacionesDiv);
+      }
+
+
+      swalOk("Producto autocompletado con IA");
+
+    } catch (err) {
+      console.error(err);
+      swalError("Error analizando texto");
+    } finally {
+      Swal.close();
+    }
+
   };
+
 }

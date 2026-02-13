@@ -167,3 +167,27 @@ th.activo {
 th.activo .flecha {
   opacity: 1;
 }
+
+@media (max-width: 768px) {
+
+  #modal {
+    display: flex;
+    align-items: flex-end;
+  }
+
+  #modal > div {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 90vh;
+    border-radius: 20px 20px 0 0;
+    animation: subirSheet 0.25s ease-out;
+  }
+
+  @keyframes subirSheet {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+}

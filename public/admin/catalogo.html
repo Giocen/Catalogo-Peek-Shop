@@ -177,10 +177,11 @@
 
     <!-- Input oculto cámara -->
     <input id="inputCamaraIA"
-           type="file"
-           accept="image/*"
-           capture="environment"
-           class="hidden">
+       type="file"
+       accept="image/*"
+       capture="environment"
+       class="hidden">
+
 
     <!-- ================= DATOS ================= -->
     <div class="space-y-3">
@@ -193,6 +194,23 @@
                 rows="3"
                 class="input"
                 placeholder="Descripción"></textarea>
+            <div class="mt-4">
+              <label class="text-sm font-medium">
+                🔎 Pegar información del producto (copiada de Google)
+              </label>
+
+              <textarea
+                id="textoCompletoIA"
+                class="input w-full h-32"
+                placeholder="Pega aquí toda la información del producto..."
+              ></textarea>
+
+              <button
+                id="btnAnalizarTextoIA"
+                class="mt-2 px-3 py-2 bg-purple-600 text-white rounded">
+                🤖 Analizar Texto
+              </button>
+          </div>
     </div>
 
     <!-- CATEGORÍA -->
