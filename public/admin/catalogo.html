@@ -119,36 +119,80 @@
 
   <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl p-6">
 
-    <!-- TÍTULO -->    
-      <div class="flex items-center justify-between mb-4">
-        <h2 id="tituloModal" class="text-xl font-bold text-slate-800">
-          🧾 Nuevo producto
-        </h2>
+    <!-- ================= TÍTULO ================= -->
+    <div class="flex items-center justify-between mb-4">
 
-        <div class="flex items-center gap-2">
-          <button
-            id="btnIA"
-            type="button"
-            class="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700">
-            🧠 IA
-          </button>
+      <h2 id="tituloModal" class="text-xl font-bold text-slate-800">
+        🧾 Nuevo producto
+      </h2>
 
-          <button data-cerrar class="text-slate-400 hover:text-red-500">
-            ✕
-          </button>
-        </div>
+      <div class="flex items-center gap-2">
+
+        <button
+          id="btnIA"
+          type="button"
+          class="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700">
+          🧠 IA
+        </button>
+
+        <button
+          id="btnIALocal"
+          type="button"
+          class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+          ⚡ Rápido
+        </button>
+
+        <button data-cerrar
+          class="text-slate-400 hover:text-red-500">
+          ✕
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ================= FOTO INTELIGENTE ================= -->
+    <div class="mb-4 p-4 bg-slate-50 rounded-xl border">
+
+      <div class="flex gap-2 flex-wrap">
+
+        <button id="btnFotoIA"
+          type="button"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+          📸 Tomar foto inteligente
+        </button>
+
+        <button id="btnBuscarLens"
+          type="button"
+          class="px-4 py-2 bg-slate-600 text-white rounded-lg text-sm hover:bg-slate-700">
+          🔎 Buscar en Google
+        </button>
+
       </div>
 
-    <!-- DATOS -->
+      <p class="text-xs text-slate-500 mt-2">
+        Toma una foto y el sistema sugerirá categoría y presentación automáticamente.
+      </p>
+
+    </div>
+
+    <!-- Input oculto cámara -->
+    <input id="inputCamaraIA"
+           type="file"
+           accept="image/*"
+           capture="environment"
+           class="hidden">
+
+    <!-- ================= DATOS ================= -->
     <div class="space-y-3">
       <input id="nombre" class="input" placeholder="Nombre del producto">
-      <input
-        id="marca"
-        class="input uppercase"
-        placeholder="Marca (Ej. Royal Canin)"
-      >
+      <input id="marca"
+             class="input uppercase"
+             placeholder="Marca (Ej. Royal Canin)">
       <input id="codigo" class="input" placeholder="Código / SKU">
-      <textarea id="descripcion" rows="3" class="input" placeholder="Descripción"></textarea>
+      <textarea id="descripcion"
+                rows="3"
+                class="input"
+                placeholder="Descripción"></textarea>
     </div>
 
     <!-- CATEGORÍA -->

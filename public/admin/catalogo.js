@@ -456,6 +456,60 @@ window.eliminarPresentacion = i => {
   renderPresentaciones();
 };
 
+
+/* ===================================================== */
+/* 🔥 MOTOR INTELIGENTE LOCAL (PONER AQUÍ) */
+/* ===================================================== */
+
+function analizarProductoLocal({ nombre, descripcion, marca }) {
+
+  const texto = `${nombre} ${descripcion} ${marca}`.toLowerCase();
+
+  let categoriaDetectada = null;
+  let unidadDetectada = "pieza";
+  let tallaDetectada = "";
+  let nombrePresentacion = "General";
+
+  if (/croqueta|alimento|dog chow|pro plan|nupec|royal canin/.test(texto)) {
+    categoriaDetectada = "Alimentos";
+  }
+
+  if (/collar|correa|pechera/.test(texto)) {
+    categoriaDetectada = "Accesorios";
+  }
+
+  if (/juguete|pelota|mordedera/.test(texto)) {
+    categoriaDetectada = "Juguetes";
+  }
+
+  const kgMatch = texto.match(/(\d+)\s?(kg|kilo|kilos)/);
+
+  if (kgMatch) {
+    unidadDetectada = "bulto";
+    tallaDetectada = `${kgMatch[1]} kg`;
+    nombrePresentacion = `Bulto ${kgMatch[1]}kg`;
+  }
+
+  return {
+    categoria: categoriaDetectada,
+    descripcion: descripcion || "",
+    presentaciones: [{
+      nombre: nombrePresentacion,
+      unidad: unidadDetectada,
+      cantidad: 1,
+      talla: tallaDetectada,
+      costo: "",
+      precio: "",
+      precio_oferta: "",
+      en_oferta: false,
+      margen: 0,
+      stock: 0,
+      activo: true,
+      detalle: ""
+    }]
+  };
+}
+
 /* ================= VALIDACIONES ================= */
 function validar() {
   if (!nombre.value.trim()) {
@@ -1247,6 +1301,10 @@ if (modalContent) {
   });
 }
 
+/* ===================================================== */
+/* 🧠 BOTÓN IA HÍBRIDA (OpenAI + Fallback Local) */
+/* ===================================================== */
+
 const btnIA = document.getElementById("btnIA");
 
 if (btnIA) {
@@ -1260,42 +1318,183 @@ if (btnIA) {
 
     swalLoading("Analizando con IA...");
 
+    let data = null;
+    let usoLocal = false;
+
     try {
-      const respuesta = await fetch("https://us-central1-catalogo-peek-shop.cloudfunctions.net/iaProducto", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          nombre: nombre.value,
-          descripcion: descripcion.value,
-          marca: marca.value
-        })
-      });
+      /* ============================
+         1️⃣ INTENTA OPENAI
+      ============================ */
 
-      const data = await respuesta.json();
+      const respuesta = await fetch(
+        "https://us-central1-catalogo-peek-shop.cloudfunctions.net/iaProducto",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: nombre.value,
+            descripcion: descripcion.value,
+            marca: marca.value
+          })
+        }
+      );
 
-      if (!data.ok) {
-        swalError("No se pudo analizar el producto");
-        return;
+      if (!respuesta.ok) {
+        throw new Error("IA remota falló");
       }
 
-      // 🔹 Autocompletar
-      categoria.value = data.categoria || categoria.value;
-      descripcion.value = data.descripcion || descripcion.value;
+      const result = await respuesta.json();
+
+      if (!result.ok) {
+        throw new Error("IA respondió sin éxito");
+      }
+
+      data = result;
+
+    } catch (err) {
+
+      console.warn("⚠️ IA remota falló, usando modo local...");
+      usoLocal = true;
+
+      /* ============================
+         2️⃣ FALLBACK LOCAL
+      ============================ */
+
+      data = analizarProductoLocal({
+        nombre: nombre.value,
+        descripcion: descripcion.value,
+        marca: marca.value
+      });
+    }
+
+    /* ============================
+       3️⃣ AUTOCOMPLETAR
+    ============================ */
+
+    try {
+
+      if (data.categoria) {
+        categoria.value = data.categoria;
+      }
+
+      if (data.descripcion) {
+        descripcion.value = data.descripcion;
+      }
 
       if (data.presentaciones?.length) {
         presentaciones = data.presentaciones;
         renderPresentaciones();
       }
 
-      swalOk("Datos completados con IA");
+      if (usoLocal) {
+        swalOk("Sugerencias generadas (modo rápido)");
+      } else {
+        swalOk("Datos completados con IA avanzada");
+      }
 
     } catch (err) {
       console.error(err);
-      swalError("Error con IA");
+      swalError("Error procesando datos IA");
     } finally {
       Swal.close();
     }
+  };
+}
+
+/* ===================================================== */
+/* ⚡ BOTÓN IA LOCAL (GRATIS) */
+/* ===================================================== */
+
+const btnIALocal = document.getElementById("btnIALocal");
+
+if (btnIALocal) {
+  btnIALocal.onclick = (e) => {
+    e.stopPropagation();
+
+    if (!nombre.value.trim()) {
+      swalWarn("Escribe al menos el nombre del producto");
+      return;
+    }
+
+    swalLoading("Analizando localmente...");
+
+    try {
+      const data = analizarProductoLocal({
+        nombre: nombre.value,
+        descripcion: descripcion.value,
+        marca: marca.value
+      });
+
+      if (data.categoria) {
+        categoria.value = data.categoria;
+      }
+
+      if (data.descripcion) {
+        descripcion.value = data.descripcion;
+      }
+
+      if (data.presentaciones?.length) {
+        presentaciones = data.presentaciones;
+        renderPresentaciones();
+      }
+
+      swalOk("Datos sugeridos (modo rápido)");
+    } catch (err) {
+      console.error(err);
+      swalError("Error en análisis local");
+    } finally {
+      Swal.close();
+    }
+  };
+}
+
+
+const btnFotoIA = document.getElementById("btnFotoIA");
+const btnBuscarLens = document.getElementById("btnBuscarLens");
+const inputCamaraIA = document.getElementById("inputCamaraIA");
+
+if (btnFotoIA) {
+  btnFotoIA.onclick = () => {
+    inputCamaraIA.click();
+  };
+}
+
+if (btnBuscarLens) {
+  btnBuscarLens.onclick = () => {
+    if (!nombre.value.trim()) {
+      swalWarn("Escribe al menos el nombre para buscar");
+      return;
+    }
+
+    const query = encodeURIComponent(nombre.value);
+    window.open(`https://lens.google.com/uploadbyurl?url=${query}`, "_blank");
+  };
+}
+
+if (inputCamaraIA) {
+  inputCamaraIA.onchange = async () => {
+    const file = inputCamaraIA.files[0];
+    if (!file) return;
+
+    // 🔹 Solo la agregamos normal
+    procesarArchivoMedia(file);
+
+    // 🔹 Motor inteligente local
+    const sugerencia = analizarProductoLocal({
+      nombre: nombre.value,
+      descripcion: descripcion.value,
+      marca: marca.value
+    });
+
+    if (sugerencia.categoria) {
+      categoria.value = sugerencia.categoria;
+    }
+
+    if (sugerencia.presentaciones?.length) {
+      presentaciones = sugerencia.presentaciones;
+      renderPresentaciones();
+    }
+
+    swalOk("Imagen agregada y datos sugeridos");
   };
 }
