@@ -792,58 +792,39 @@ function renderComponente(b, ctx) {
         `;
 
     /* ================= OFERTA ================= */
-    case "offer":
-      return ctx.p.es_oferta
+    case "color":
+      return ctx.p.colores?.length
         ? `
-          <div class="flex items-center gap-2 mt-1">
-            <span class="precio-anterior">
-              $${ctx.p.precio_anterior}
-            </span>
-            <span class="badge-oferta">OFERTA</span>
+          <div class="space-y-3">
+
+            
+            <div class="text-sm font-medium text-gray-700">
+              Color seleccionado:
+            </div>
+
+            <div class="flex gap-4 flex-wrap">
+
+              ${ctx.p.colores.map((c,i) => `
+                <div class="flex flex-col items-center gap-1">
+
+                  <button
+                    class="color-btn w-10 h-10 rounded-full border-2
+                          transition-all duration-200 hover:scale-110
+                          ${i === 0 ? 'ring-2 ring-blue-600 border-blue-600 scale-110' : 'border-gray-300'}"
+                    data-color="${c}"
+                    onclick="seleccionarColor('${c}')"
+                    style="background:${c}">
+                  </button>
+
+                </div>
+              `).join("")}
+
+            </div>
+
           </div>
         `
         : "";
 
-    /* ================= COLORES ================= */
-      case "color":
-          return ctx.p.colores?.length
-            ? `
-              <div class="space-y-3">
-
-                <div class="text-sm font-medium text-gray-700">
-                  Color seleccionado:
-                  <span id="colorSeleccionadoLabel"
-                        class="font-semibold text-gray-900">
-                    ${ctx.p.colores[0]}
-                  </span>
-                </div>
-
-                <div class="flex gap-4 flex-wrap">
-
-                  ${ctx.p.colores.map((c,i) => `
-                    <div class="flex flex-col items-center gap-1">
-
-                      <button
-                        class="color-btn w-10 h-10 rounded-full border-2
-                              transition-all duration-200 hover:scale-110
-                              ${i === 0 ? 'ring-2 ring-blue-600 border-blue-600 scale-110' : 'border-gray-300'}"
-                        data-color="${c}"
-                        onclick="seleccionarColor('${c}')"
-                        style="background:${c}">
-                      </button>
-
-                      <span class="text-xs text-gray-600">
-                        ${c}
-                      </span>
-
-                    </div>
-                  `).join("")}
-
-                </div>
-
-              </div>
-            `
-            : "";
 
 
             /* ================= VARIANTES ================= */

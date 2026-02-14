@@ -1,11 +1,13 @@
 import { supabase } from "./supabase.js";
 
 
-let carrito = JSON.parse(localStorage.getItem("carrito") || "[]");
+function getCarrito() {
+  return JSON.parse(localStorage.getItem("carrito") || "[]");
+}
 
-
-const portal = document.getElementById("cart-portal");
-const btnCarrito = document.getElementById("btnCarrito");
+function setCarrito(data) {
+  localStorage.setItem("carrito", JSON.stringify(data));
+}
 
 /* ===== CONFIG ENVÍO  ===== */
 const COSTO_ENVIO = 25;
@@ -27,7 +29,11 @@ function celebrarEnvioGratis() {
 
 /* ================= ABRIR ================= */
 export function abrirCarrito() {
+
+  const carrito = getCarrito();
+
   if (!carrito.length) {
+
 
     Swal.fire({
       width: 380,
@@ -83,6 +89,7 @@ export function abrirCarrito() {
 /* ================= AGREGAR ================= */
   export function agregarAlCarrito(producto) {
 
+    const carrito = getCarrito();
     const p = carrito.find(i =>
       i.id === producto.id &&
       i.presentacion_id === producto.presentacion_id &&
@@ -95,6 +102,7 @@ export function abrirCarrito() {
       carrito.push({ ...producto, cantidad: 1 });
     }
 
+    setCarrito(carrito);
     guardar();
     animarCarritoIcon();
     toast("Agregado al carrito 🛒");
@@ -104,6 +112,11 @@ export function abrirCarrito() {
 
 /* ================= RENDER PORTAL ================= */
 function renderPortal() {
+
+  const carrito = getCarrito();
+  const portal = document.getElementById("cart-portal");
+
+      if (!portal) return;
 
   const subtotal = carrito.reduce((a, p) =>
     a + Number(p.precio) * Number(p.cantidad), 0);
@@ -362,7 +375,11 @@ function renderPortal() {
 
 /* ================= ITEMS + TOTAL ================= */
 function renderItems() {
+
+  const carrito = getCarrito();
+
   const body = document.getElementById("cartBody");
+
   const totalEl = document.getElementById("cartTotal");
 
   let subtotal = 0;
@@ -490,39 +507,63 @@ function renderItems() {
 
 /* ================= ACCIONES ================= */
   window._cartPlus = (id, presId, color) => {
-    const p = carrito.find(i =>
-      i.id === id &&
-      i.presentacion_id === presId &&
-      i.color === (color || null)
-    );
-    if (!p) return;
-    p.cantidad++;
-    guardar();
-    renderItems();
-  };
+
+  let carrito = getCarrito();
+
+  const p = carrito.find(i =>
+    i.id === id &&
+    (!presId || i.presentacion_id === presId) &&
+    (!color || i.color === color)
+  );
+
+  if (!p) return;
+
+  p.cantidad++;
+  setCarrito(carrito);
+  guardar();
+  renderItems();
+};
 
   window._cartMinus = (id, presId, color) => {
-    const i = carrito.findIndex(p =>
-      p.id === id &&
-      p.presentacion_id === presId &&
-      p.color === (color || null)
-    );
-    if (i === -1) return;
-    carrito[i].cantidad--;
-    if (carrito[i].cantidad <= 0) carrito.splice(i, 1);
-    guardar();
-    renderItems();
-  };
 
-  window._cartDel = (id, presId, color) => {
-    carrito = carrito.filter(p =>
-      !(p.id === id &&
-        p.presentacion_id === presId &&
-        p.color === (color || null))
-    );
-    guardar();
-    renderItems();
-  };
+  let carrito = getCarrito();
+
+  const index = carrito.findIndex(i =>
+    i.id === id &&
+    (!presId || i.presentacion_id === presId) &&
+    (!color || i.color === color)
+  );
+
+  if (index === -1) return;
+
+  carrito[index].cantidad--;
+
+  if (carrito[index].cantidad <= 0) {
+    carrito.splice(index, 1);
+  }
+
+  setCarrito(carrito);
+  guardar();
+  renderItems();
+};
+
+window._cartDel = (id, presId, color) => {
+
+  let carrito = getCarrito();
+
+  carrito = carrito.filter(i =>
+
+    !(
+      i.id === id &&
+      (!presId || i.presentacion_id === presId) &&
+      (!color || i.color === color)
+    )
+  );
+
+  setCarrito(carrito);
+  guardar();
+  renderItems();
+};
 
 window._setEntrega = tipo => {
   tipoEntrega = tipo;
@@ -530,7 +571,10 @@ window._setEntrega = tipo => {
 };
 
 window._cerrarSiOverlay = e => {
-  if (e.target.id === "cartOverlay") portal.innerHTML = "";
+  if (e.target.id === "cartOverlay") {
+    const portal = document.getElementById("cart-portal");
+    if (portal) portal.innerHTML = "";
+  }
 };
 
 /* ================= DATOS CLIENTE ================= */
@@ -635,7 +679,7 @@ function enviarWhats(cliente, numeroPedido, totales) {
     msg += `PRODUCTOS\n`;
     msg += `----------------------\n`;
     
-    const productos = window._compraTemporal || carrito;
+    const productos = window._compraTemporal || getCarrito();
 
     productos.forEach(p => {
       msg += `${p.nombre}\n`;
@@ -703,10 +747,19 @@ function enviarWhats(cliente, numeroPedido, totales) {
 
 /* ================= UTIL ================= */
 function guardar() {
-  localStorage.setItem("carrito", JSON.stringify(carrito));
-  const badge = document.getElementById("carritoCount");
-  if (badge) badge.textContent = carrito.reduce((a, p) => a + p.cantidad, 0);
+
+  const carrito = getCarrito();
+
+  const total = carrito.reduce((a, p) => a + p.cantidad, 0);
+
+  const desktop = document.getElementById("carritoCount");
+  const mobile = document.getElementById("carritoCountMobile");
+
+  if (desktop) desktop.textContent = total;
+  if (mobile) mobile.textContent = total;
 }
+
+
 
 function toast(t) {
   const d = document.createElement("div");
@@ -718,21 +771,18 @@ function toast(t) {
   setTimeout(() => d.remove(), 1200);
 }
 
-if (btnCarrito) btnCarrito.onclick = abrirCarrito;
 guardar();
 
 
-function limpiarCarrito() {
-    carrito = [];
-    localStorage.removeItem("carrito");
-    localStorage.removeItem("compra_directa");
-  
-    const badge = document.getElementById("carritoCount");
-    if (badge) badge.textContent = "0";
-  
-    // Cierra el carrito visual
-    if (portal) portal.innerHTML = "";
-  }
+ function limpiarCarrito() {
+  setCarrito([]);
+  localStorage.removeItem("compra_directa");
+  guardar();
+
+  const portal = document.getElementById("cart-portal");
+  if (portal) portal.innerHTML = "";
+}
+
 
   function generarNumeroPedido() {
     const fecha = new Date();
@@ -777,8 +827,8 @@ function limpiarCarrito() {
   const totales = calcularTotales();  
   const numeroPedido = generarNumeroPedido();
   const productos = esCompraDirecta && window._compraTemporal
-    ? window._compraTemporal
-    : carrito;
+  ? window._compraTemporal
+  : getCarrito();
 
   Swal.fire({
     width: 480,
@@ -884,7 +934,7 @@ function limpiarCarrito() {
       subtotal: totales.subtotal,
       envio: totales.envio,
       total: totales.total,
-      productos: window._compraTemporal || carrito
+      productos: window._compraTemporal || getCarrito()
     });
   }
   
@@ -913,26 +963,26 @@ style.innerHTML = `
 document.head.appendChild(style);
 
 function animarCarritoIcon() {
-  const icon = document.getElementById("btnCarrito");
-  if (!icon) return;
+  const mobile = document.getElementById("btnCarrito");
+  const desktop = document.getElementById("btnCarritoDesktop");
 
-  icon.style.animation = "shakeCart .4s";
-  setTimeout(() => icon.style.animation = "", 400);
+  if (mobile) {
+    mobile.style.animation = "shakeCart .4s";
+    setTimeout(() => mobile.style.animation = "", 400);
+  }
+
+  if (desktop) {
+    desktop.style.animation = "shakeCart .4s";
+    setTimeout(() => desktop.style.animation = "", 400);
+  }
 }
 
-
 window._cerrarCarrito = () => {
-  const overlay = document.getElementById("cartOverlay");
-  if (!overlay) return;
-
-  overlay.style.transition = "opacity .2s ease";
-  overlay.style.opacity = "0";
-
-  setTimeout(() => {
-    const portal = document.getElementById("cart-portal");
-    if (portal) portal.innerHTML = "";
-  }, 200);
+  const portal = document.getElementById("cart-portal");
+  if (portal) portal.innerHTML = "";
 };
+
+
 
 function lanzarConfetti() {
   const container = document.createElement("div");
@@ -979,8 +1029,9 @@ function animarContador(final) {
 
 function cotizarEnvioMerida() {
 
-  const zona = "Mérida (fuera de Caucel)";
+  const carrito = getCarrito();
 
+  const zona = "Mérida (fuera de Caucel)";
   let subtotal = 0;
 
   carrito.forEach(p => {
@@ -997,7 +1048,7 @@ function cotizarEnvioMerida() {
   msg += `Subtotal: $${subtotal}\n`;
   msg += `Zona: ${zona}`;
 
-  const numeroWhatsApp = "5219991494268"; // mismo número que producto.js
+  const numeroWhatsApp = "5219991494268";
 
   window.open(
     `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(msg)}`,

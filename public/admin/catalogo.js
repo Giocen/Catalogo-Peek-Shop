@@ -156,6 +156,28 @@ const stockDiv = document.getElementById("stockPorColor");
 const presentacionesDiv = document.getElementById("presentaciones");
 const btnAgregarPresentacion = document.getElementById("btnAgregarPresentacion");
 
+/* ================= AGREGAR PRESENTACIÓN ================= */
+
+if (btnAgregarPresentacion) {
+
+  btnAgregarPresentacion.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const lista = getPresentaciones();
+
+    lista.push({
+      ...crearPresentacionBase(),
+      nombre: "Nueva presentación"
+    });
+
+    setPresentaciones(lista);
+    renderPresentaciones(presentacionesDiv);
+
+  });
+
+}
+
 /* ================= ESTADO ================= */
 let productoActual = null;
 let colores = [];
@@ -404,20 +426,29 @@ function generarSKU(p) {
   return `PEEK-${cat}-${p.unidad.toUpperCase()}${talla}`;
 }
 
-function obtenerPrecioBase() {
-  let min = null;
- 
-  const presentaciones = getPresentaciones();
-  for (const p of presentaciones) {
-    if (!p.activo) continue;
-    const precio = p.en_oferta && p.precio_oferta
-      ? Number(p.precio_oferta)
-      : Number(p.precio);
-    if (!precio || precio <= 0) continue;
-    if (min === null || precio < min) min = precio;
-  }
-  return min;
-}
+    function obtenerPrecioBase() {
+
+      const lista = getPresentaciones();
+
+      if (!lista.length) return null;
+
+      const preciosValidos = lista
+        .filter(p => p.activo)
+        .map(p => {
+
+          const precio = p.en_oferta && p.precio_oferta
+            ? Number(p.precio_oferta)
+            : Number(p.precio);
+
+          return precio > 0 ? precio : null;
+        })
+        .filter(p => p !== null);
+
+      if (!preciosValidos.length) return null;
+
+      return Math.min(...preciosValidos);
+    }
+
 
 async function validarCodigoEnVivo() {
   const valor = codigo.value.trim();
@@ -496,23 +527,24 @@ if (btnGuardar) btnGuardar.onclick = async () => {
     swalLoading("Guardando producto...");
 
     const precioBase = obtenerPrecioBase();
+
     if (precioBase === null) {
-      swalWarn("Debes capturar al menos un precio válido");
+      swalWarn("Debes capturar al menos una presentación activa con precio válido");
       throw new Error("Validación");
     }
-
     const payload = {
       codigo: codigo.value.trim() || null,
       nombre: nombre.value.trim(),
       marca: marca.value.trim() || null,
       descripcion: descripcion.value.trim(),
       categoria: categoriaNueva.value || categoria.value,
-      precio: Number(precioBase),
+      precio: Number(precioBase), 
       es_oferta: es_oferta.checked,
       activo: activo.checked,
       notas: notas.value,
       colores: colores.map(c => c.hex)
     };
+
 
    const productoId = await guardarProducto({
       supabase,
@@ -1141,7 +1173,7 @@ if (btnIALocal) {
 
       if (data.presentaciones?.length) {
         setPresentaciones(data.presentaciones);
-        renderPresentaciones();
+        renderPresentaciones(presentacionesDiv);
       }
 
       swalOk("Datos sugeridos (modo rápido)");

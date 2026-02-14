@@ -229,10 +229,22 @@ function renderCategorias(productos) {
 }
 
 /* =========================================================
-   BOTÓN CARRITO
+   BOTONES CARRITO (MÓVIL + DESKTOP)
 ========================================================= */
-const btnCarrito = document.getElementById("btnCarrito");
-if (btnCarrito) btnCarrito.addEventListener("click", abrirCarrito);
+document.addEventListener("DOMContentLoaded", () => {
+
+  const btnCarrito = document.getElementById("btnCarrito");
+  const btnCarritoDesktop = document.getElementById("btnCarritoDesktop");
+
+  if (btnCarrito) {
+    btnCarrito.addEventListener("click", abrirCarrito);
+  }
+
+  if (btnCarritoDesktop) {
+    btnCarritoDesktop.addEventListener("click", abrirCarrito);
+  }
+
+});
 
 /* =========================================================
    BUSCADOR
