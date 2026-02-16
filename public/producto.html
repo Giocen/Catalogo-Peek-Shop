@@ -10,11 +10,13 @@
 
   <!-- SweetAlert -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.7/dist/sweetalert2.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 
   <!-- Estilos cliente -->
   <link rel="stylesheet" href="/styles/cliente.css">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css"/>
+  
   
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -90,41 +92,36 @@
   </button>
 </div>
 
-<!-- ================= BOTÓN CARRITO ================= -->
-<!-- BOTÓN CARRITO FLOTANTE -->
+<!-- ================= BOTÓN CARRITO FLOTANTE ================= -->
 <button id="btnCarrito"
-  style="
-    position:fixed;
-    bottom:20px;
-    right:20px;
-    background:linear-gradient(135deg,#22c55e,#16a34a);
-    color:white;
-    border:none;
-    border-radius:50%;
-    width:60px;
-    height:60px;
-    box-shadow:0 8px 20px rgba(22,163,74,.4);
-    font-size:22px;
-    cursor:pointer;
-    z-index:9999;
-  ">
-  🛒
+  class="fixed bottom-6 right-6
+         w-16 h-16
+         rounded-2xl
+         bg-white/90 backdrop-blur-xl
+         shadow-2xl
+         border border-white/40
+         flex items-center justify-center
+         transition-all duration-300
+         hover:scale-110 active:scale-95
+         z-[9999] group">
+
+  <i data-lucide="shopping-cart"
+     class="w-7 h-7 text-green-600 transition-transform duration-300 group-hover:scale-110">
+  </i>
+
   <span id="carritoCount"
-    style="
-      position:absolute;
-      top:-6px;
-      right:-6px;
-      background:#ef4444;
-      color:white;
-      font-size:11px;
-      width:20px;
-      height:20px;
-      border-radius:50%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    ">0</span>
+    class="absolute -top-2 -right-2
+           bg-red-500 text-white
+           text-[11px] font-bold
+           w-5 h-5
+           rounded-full
+           flex items-center justify-center
+           shadow-md">
+    0
+  </span>
+
 </button>
+
 
 <!-- PORTAL CARRITO -->
 <div id="cart-portal"></div>
@@ -133,6 +130,12 @@
 <script type="module" src="/js/carrito.js"></script>
 <script type="module" src="/js/producto.js"></script>
 <script type="module" src="/js/producto.admin.js"></script>
+
+<script>
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+</script>
 
 </body>
 </html>

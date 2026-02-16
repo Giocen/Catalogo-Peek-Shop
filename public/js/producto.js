@@ -9,6 +9,14 @@ import { auth } from "./firebase.js";
 import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { abrirCarrito } from "./carrito.js";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btnCarrito = document.getElementById("btnCarrito");
+  if (btnCarrito) {
+    btnCarrito.addEventListener("click", abrirCarrito);
+  }
+});
 
 /* =========================================================
    🧱 LAYOUT BASE GLOBAL (NO SE BORRA)
@@ -21,12 +29,12 @@ const LAYOUT_BASE = [
   { componente: "category", zona: "right", orden: 3 },
 
   { componente: "offer", zona: "right", orden: 4 },
-  { componente: "price", zona: "right", orden: 5 },
-  { componente: "color", zona: "right", orden: 6 },
-  { componente: "variant", zona: "right", orden: 7 },
 
-  { componente: "buttons", zona: "right", orden: 8 },
-  
+  { componente: "price", zona: "right", orden: 5 },     
+  { componente: "variant", zona: "right", orden: 6 },   
+  { componente: "color", zona: "right", orden: 7 },      
+  { componente: "envio", zona: "right", orden: 8 },      
+  { componente: "buttons", zona: "right", orden: 9 },    
 ];
 /* =========================================================
    🔐 DETECTAR ADMIN (NO BLOQUEANTE)
@@ -156,6 +164,11 @@ window._productoActualImgs = imgs;
 
     window._presentaciones = presentaciones || [];
 
+    window._presentacionSeleccionada =
+  window._presentaciones.find(p => p.en_oferta) ||
+  window._presentaciones[0];
+
+
   const ctx = { p, imgs, presentaciones };
   window._productoActual = p;
   // 🔹 Auto seleccionar primer color
@@ -196,152 +209,174 @@ cont.innerHTML = `
 
         </div>
 
-<!-- ================= TABS PROFESIONALES ================= -->
-  <div class="mt-12">
+<!-- ================= DESCRIPCIÓN ================= -->
+        <div class="mt-12">
 
-    <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div class="bg-white rounded-2xl shadow-sm border overflow-hidden">
 
-      <!-- HEADER TABS -->
-      <div class="flex border-b bg-gray-50">
-        
-        <button
-          class="tab-btn flex-1 py-4 text-sm font-semibold
-                text-blue-600 border-b-2 border-blue-600
-                flex items-center justify-center gap-2 transition"
-          data-tab="desc"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor"
-            stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M19 11H5m14-4H5m14 8H5m14 4H5"/>
-          </svg>
-          Descripción
-        </button>
+            <!-- HEADER -->
+            <div class="flex border-b bg-gray-50">
+              <div class="w-full py-4 text-sm font-semibold
+                          text-blue-600 border-b-2 border-blue-600
+                          flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                  stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19 11H5m14-4H5m14 8H5m14 4H5"/>
+                </svg>
+                Descripción
+              </div>
+            </div>
 
-        <button
-          class="tab-btn flex-1 py-4 text-sm font-semibold
-                text-gray-500 hover:text-gray-700
-                flex items-center justify-center gap-2 transition"
-          data-tab="info"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor"
-            stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M9 12l2 2l4-4m6 2a9 9 0 11-18 0a9 9 0 0118 0z"/>
-          </svg>
-          Información
-        </button>
+            <!-- CONTENIDO -->
+            <div class="p-8">
 
-      </div>
-
-      <!-- CONTENIDO -->
-      <div class="p-8 tab-content">
 
         <!-- ================= DESCRIPCIÓN ================= -->
-        <div data-tab-content="desc" class="animate-fadeIn">
+        <div class="animate-fadeIn">
 
-          ${
-            ctx.p.descripcion
-              ? (() => {
-                  const texto = ctx.p.descripcion;
-                  const resumen = texto.length > 450
-                    ? texto.substring(0, 450) + "..."
-                    : texto;
+         ${
+          ctx.p.descripcion
+            ? (() => {
 
-                  return `
-                    <div class="max-w-4xl mx-auto">
+                const texto = ctx.p.descripcion;
 
-                      <div class="text-gray-700 text-[15px] leading-7 space-y-4">
+                const formatear = (contenido) => {
+                  return contenido
+                    .split("\n")
+                    .filter(t => t.trim() !== "")
+                    .map(t => {
 
-                        <div id="descResumenTab" class="whitespace-pre-line">
-                          ${resumen}
-                        </div>
+                      const partes = t.split(":");
 
-                        <div id="descCompletaTab"
-                            class="hidden whitespace-pre-line">
-                          ${texto}
-                        </div>
+                      if (partes.length > 1) {
 
-                      </div>
+                       const titulo = escaparHTML(partes.shift().trim());
+                      const resto = escaparHTML(partes.join(":").trim());     
 
-                      ${
-                        texto.length > 450
-                          ? `
-                          <div class="mt-6 text-center">
-                            <button id="btnToggleDescTab"
-                              class="inline-flex items-center gap-2
-                                    text-blue-600 font-semibold
-                                    hover:text-blue-700 transition">
-
-                              <span id="txtToggleDesc">Ver más</span>
-
-                              <svg id="iconToggleDesc"
-                                class="w-4 h-4 transition-transform duration-300"
-                                fill="none" stroke="currentColor"
-                                stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round"
-                                      stroke-linejoin="round"
-                                      d="M19 9l-7 7-7-7"/>
-                              </svg>
-
-                            </button>
+                        return `
+                          <div class="text-gray-700 text-[15px] leading-7">                            
+                            <span>
+                              <strong class="font-semibold text-gray-900">
+                              ${escaparHTML(titulo)}:
+                              </strong>
+                              ${escaparHTML(resto)}
+                            </span>
                           </div>
-                          `
-                          : ""
+                        `;
                       }
 
+                      return `
+                        <div class="text-gray-700 text-sm md:text-[15px] leading-6 md:leading-7">                          
+                          <span>${escaparHTML(t)}</span>
+                        </div>
+                      `;
+                    })
+                    .join("");
+                };
+                const resumenTexto =
+                  texto.length > 450
+                    ? texto.substring(0, texto.lastIndexOf(" ", 450)) + "..."
+                    : texto;
+
+                return `
+                  <div class="max-w-4xl mx-auto space-y-3 md:space-y-4 px-1 md:px-0">
+
+                    <div id="descResumenTab"
+                        class="text-sm md:text-[15px] leading-6 md:leading-7 
+                                text-gray-700 line-clamp-5">
+                      ${formatear(resumenTexto)}
                     </div>
-                  `;
-                })()
-              : `
-                <div class="text-sm text-gray-400 text-center">
-                  Este producto no tiene descripción registrada.
-                </div>
-              `
-          }
 
-        </div>
-
-        <!-- ================= INFORMACIÓN ================= -->
-        <div data-tab-content="info" class="hidden animate-fadeIn">
-
-          ${
-            ctx.p.notas
-              ? `
-              <div class="grid md:grid-cols-2 gap-x-12 gap-y-4 text-sm text-gray-800">
-                ${ctx.p.notas
-                  .split("\n")
-                  .filter(t => t.trim() !== "")
-                  .map(t => `
-                    <div class="flex items-start gap-3 hover:translate-x-1 transition duration-200">
-                      <svg class="w-4 h-4 text-green-600 mt-[3px]" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-7.5 7.5a1 1 0 01-1.414 0l-3.5-3.5a1 1 0 111.414-1.414l2.793 2.793l6.793-6.793a1 1 0 011.414 0z"
-                          clip-rule="evenodd"/>
-                      </svg>
-                      <span>${t}</span>
+                    <div id="descCompletaTab" class="hidden">
+                      ${formatear(texto)}
                     </div>
-                  `)
-                  .join("")}
+
+                    ${
+                      texto.length > 450
+                        ? `
+                        <div class="mt-6 text-center">
+                          <button id="btnAbrirDetalle"
+                            class="text-blue-600 font-semibold mt-3">
+                            Ver detalle
+                          </button>
+                        </div>
+                        `
+                        : ""
+                    }
+
+                  </div>
+                `;
+              })()
+            : `
+              <div class="text-sm text-gray-400 text-center">
+                Este producto no tiene descripción registrada.
               </div>
-              `
-              : `
-              <div class="text-sm text-gray-400">
-                Este producto no tiene información adicional registrada.
-              </div>
-              `
-          }
+            `
+        }
 
         </div>
 
       </div>
+      
 
     </div>
 
   </div>
+  
+ <!-- ================= MODAL DETALLE FULLSCREEN ================= -->
+  <div id="modalDetalle"
+     class="fixed inset-0 bg-white z-[999999] hidden flex-col transition duration-300 translate-y-full">
 
+    <div class="flex items-center justify-between
+                px-4 py-3 border-b">
+
+      <h2 class="font-semibold text-lg">
+        Detalle del producto
+      </h2>
+
+      <button id="cerrarDetalle"
+              class="text-gray-600 text-xl">
+        ✕
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto flex-1 text-sm md:text-base leading-6">
+      ${ctx.p.descripcion
+        ? ctx.p.descripcion
+            .split("\n")
+            .map(t => `<div class="mb-3">${escaparHTML(t)}</div>`)
+            .join("")
+        : ""}
+    </div>
+
+  </div>
 `;
+
+
+
+// 🔥 Marcar visualmente la presentación por default
+if (window._presentacionSeleccionada) {
+
+  const id = window._presentacionSeleccionada.id;
+
+  setTimeout(() => {
+
+    const btn = document.querySelector(`.variante[data-id="${id}"]`);
+
+    if (btn) {
+      btn.classList.add(
+        "ring-2",
+        "ring-yellow-400",
+        "bg-yellow-50",
+        "border-yellow-400"
+      );
+    }
+
+    actualizarEnvio(window._presentacionSeleccionada.precio);
+
+  }, 0);
+}
 
   activarZoom();  
   activarBotones(p, imgs[0]);
@@ -396,30 +431,41 @@ setTimeout(() => {
 /* =========================================================
    HELPERS
 ========================================================= */
-function renderBreadcrumb(p) {
-  if (!p.categoria) return "";
-  return `
-    <div class="mb-4 text-sm text-blue-600">
-      <a href="/" class="hover:underline">← Volver</a>
-      <span class="mx-2">›</span>
-      ${p.categoria}
-    </div>`;
-}
+    function renderBreadcrumb(p) {
+          if (!p.categoria) return "";
+          return `
+            <div class="mb-4 text-sm text-blue-600">
+              <a href="/" class="hover:underline">← Volver</a>
+              <span class="mx-2">›</span>
+              ${p.categoria}
+            </div>`;
+        }
+
+        /* ================= SEGURIDAD HTML ================= */
+        function escaparHTML(str = "") {
+          return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        }
+
   
-      function renderGaleria(imgs) {
+        function renderGaleria(imgs) {
 
-        return `
-          <div class="space-y-4">
+          return `
+            <div class="space-y-4">
 
-            <!-- IMAGEN PRINCIPAL -->
-            <div id="imgZoomWrap"
-                class="relative overflow-hidden rounded-xl bg-gray-50 aspect-square">
+              <!-- IMAGEN PRINCIPAL -->
+              <div id="imgZoomWrap"
+                  class="relative overflow-hidden rounded-xl bg-white shadow-sm aspect-square">
 
-              <img id="imgPrincipal"
-                  src="${imgs[0]}"
-                  onclick="abrirLightbox(0)"
-                  class="cursor-zoom-in object-contain w-full h-full transition duration-300">
-            </div>
+                <img id="imgPrincipal"
+                    src="${imgs[0]}"
+                    onclick="abrirLightbox(0)"
+                    class="cursor-zoom-in object-contain w-full h-full transition duration-300">
+
+              </div>
+
 
             <!-- MINIATURAS -->
             <div class="flex gap-3 overflow-x-auto no-scrollbar">
@@ -673,18 +719,29 @@ async function cargarRelacionados(categoria, actualId) {
       ?.sort((a,b)=>(a.orden ?? 0)-(b.orden ?? 0))[0]
       ?.url || "/img/placeholder.png";
 
-    return `
-      <div class="bg-white rounded-lg shadow hover:shadow-lg transition">
-        <img src="${img}" class="h-40 w-full object-contain p-3">
-        <div class="p-3">
-          <div class="text-sm line-clamp-2">${p.nombre}</div>
-          <div class="font-bold mt-1">$${p.precio}</div>
+      return `
           <a href="/producto.html?id=${p.id}"
-             class="text-green-600 text-sm mt-2 inline-block">
-            Ver producto
+            class="block bg-white rounded-lg shadow 
+                    hover:shadow-lg transition group">
+
+            <img src="${img}" 
+                class="h-40 w-full object-contain p-3
+                        transition-transform duration-300
+                        group-hover:scale-105">
+
+            <div class="p-3">
+              <div class="text-sm line-clamp-2">
+                ${p.nombre}
+              </div>
+
+              <div class="font-bold mt-1 text-green-700">
+                $${p.precio}
+              </div>
+            </div>
+
           </a>
-        </div>
-      </div>`;
+        `;
+
   }).join("");
 }
 
@@ -735,61 +792,60 @@ function renderComponente(b, ctx) {
           return "";
 
     /* ================= PRECIO ================= */
-      case "price":
+        case "price": {
 
-        const pres = window._presentacionSeleccionada;
-        const precioActual = pres?.precio || ctx.p.precio;
+          const pres = window._presentacionSeleccionada;
 
-        return `
-          <div class="space-y-2">
+          let precioNormal = pres?.precio || ctx.p.precio;
+          let precioOferta = pres?.precio_oferta || null;
+          let enOferta = pres?.en_oferta === true;
 
-            <div id="precioProducto"
-                class="text-3xl md:text-4xl font-semibold text-gray-900">
-              $${precioActual}
-            </div>
+          let htmlPrecio = "";
 
-            <div id="precioPorUnidad"
-                class="text-sm text-gray-500">
-              ${
-                pres?.cantidad
-                  ? `Precio por kg: $${(precioActual / pres.cantidad).toFixed(2)}`
-                  : ""
-              }
-            </div>
+          if (enOferta && precioOferta) {
 
-            <!-- ENVÍO DINÁMICO -->
-            <div id="bloqueEnvio"
-                class="rounded-xl bg-gray-50 border p-4 text-sm transition space-y-3">
+            const descuento = Math.round(
+              ((precioNormal - precioOferta) / precioNormal) * 100
+            );
 
-              <div>
-                <select id="zonaEnvio"
-                  class="w-full border rounded-lg p-2 text-xs">
-                  <option value="Caucel">Ciudad Caucel</option>
-                  <option value="Merida">Mérida (otra colonia)</option>
-                </select>
-              </div>
+            htmlPrecio = `
+              <div class="space-y-1">
 
-              <div class="flex items-center gap-2">
-                <span id="iconoEnvio">📦</span>
-                <span id="textoEnvio" class="font-medium text-gray-700">
-                  Calculando envío...
-                </span>
-              </div>
+                <div class="flex items-center gap-3">
 
-              <div id="barraEnvioWrap" class="hidden">
-                <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                  <div id="barraEnvio"
-                      class="h-full bg-green-500 transition-all duration-500"
-                      style="width:0%"></div>
+                  <div class="text-3xl md:text-4xl font-extrabold text-green-700">
+                    $${precioOferta}
+                  </div>
+
+                  <span class="text-sm bg-red-600 text-white px-2 py-1 rounded">
+                    -${descuento}%
+                  </span>
+
                 </div>
-                <div id="mensajeEnvioExtra"
-                    class="text-xs mt-1 text-gray-600"></div>
+
+                <div class="text-sm text-gray-500 line-through">
+                  $${precioNormal}
+                </div>
+
               </div>
+            `;
 
+          } else {
+
+            htmlPrecio = `
+              <div class="text-3xl md:text-4xl font-extrabold text-green-700">
+                $${precioNormal}
+              </div>
+            `;
+          }
+
+          return `
+            <div id="bloquePrecio">
+              ${htmlPrecio}
             </div>
+          `;
+        }
 
-          </div>
-        `;
 
     /* ================= OFERTA ================= */
     case "color":
@@ -824,9 +880,40 @@ function renderComponente(b, ctx) {
           </div>
         `
         : "";
+ /* ================= ENVIO================= */
+case "envio":
 
+  return `
+    <div id="bloqueEnvio"
+        class="rounded-xl bg-gray-50 border p-4 text-sm transition space-y-3">
 
+      <div>
+        <select id="zonaEnvio"
+          class="w-full border rounded-lg p-2 text-xs">
+          <option value="Caucel">Ciudad Caucel</option>
+          <option value="Merida">Mérida (otra colonia)</option>
+        </select>
+      </div>
 
+      <div class="flex items-center gap-2">
+        <span id="iconoEnvio">📦</span>
+        <span id="textoEnvio" class="font-medium text-gray-700">
+          Calculando envío...
+        </span>
+      </div>
+
+      <div id="barraEnvioWrap" class="hidden">
+        <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+          <div id="barraEnvio"
+              class="h-full bg-green-500 transition-all duration-500"
+              style="width:0%"></div>
+        </div>
+        <div id="mensajeEnvioExtra"
+            class="text-xs mt-1 text-gray-600"></div>
+      </div>
+
+    </div>
+  `;
             /* ================= VARIANTES ================= */
        case "variant":
 
@@ -871,44 +958,31 @@ function renderComponente(b, ctx) {
     }
 }
 
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".tab-btn");
-  if (!btn) return;
-
-  const tab = btn.dataset.tab;
-
-  document.querySelectorAll(".tab-btn").forEach(b => {
-    b.classList.remove("text-blue-600", "border-blue-600", "border-b-2");
-    b.classList.add("text-gray-500");
-  });
-
-  btn.classList.add("text-blue-600", "border-blue-600", "border-b-2");
-  btn.classList.remove("text-gray-500");
-
-  document.querySelectorAll("[data-tab-content]").forEach(c => {
-    c.classList.toggle("hidden", c.dataset.tabContent !== tab);
-  });
-});
-
-
 window.seleccionarPresentacion = id => {
+
   const pres = window._presentaciones.find(p => p.id === id);
   if (!pres) return;
 
   window._presentacionSeleccionada = pres;
 
-  const precioEl = document.getElementById("precioProducto");
-  if (precioEl) precioEl.textContent = `$${pres.precio}`;
+  // 🔥 Re-renderizar solo el bloque precio
+  const bloquePrecio = document.getElementById("bloquePrecio");
 
-  // 👇 NUEVO
+  if (bloquePrecio) {
+    bloquePrecio.outerHTML = renderComponente(
+      { componente: "price" },
+      { p: window._productoActual }
+    );
+  }
+
   actualizarEnvio(pres.precio);
 
   document.querySelectorAll(".variante").forEach(b =>
-    b.classList.remove("ring-2", "ring-blue-600", "bg-blue-50")
+    b.classList.remove("ring-2", "ring-yellow-400", "bg-yellow-50")
   );
 
   const btn = document.querySelector(`.variante[data-id="${id}"]`);
-  if (btn) btn.classList.add("ring-2", "ring-yellow-400", "bg-yellow-50", "border-yellow-400");
+  if (btn) btn.classList.add("ring-2", "ring-yellow-400", "bg-yellow-50");
 };
 
 
@@ -984,25 +1058,61 @@ function actualizarEnvio(precio) {
 
       if (mensajeExtra) {
 
-        const ahora = new Date();
+      const ahora = new Date();
         const hora = ahora.getHours();
-        const dentroHorario = hora >= 9 && hora < 21;
 
-        const mensajeHorario = dentroHorario
-          ? `
+        const horaApertura = 9;
+        const horaCierre = 21;
+
+        let mensajeHorario = "";
+
+        
+        if (hora >= horaApertura && hora < horaCierre) {
+
+          mensajeHorario = `
             <div class="mt-2 px-3 py-2 rounded-lg
                         bg-green-100 text-green-800
-                        text-xs font-semibold">
-              🚀 Entrega estimada: Hoy antes de las 9 PM
-            </div>
-          `
-          : `
-            <div class="mt-2 px-3 py-2 rounded-lg
-                        bg-red-100 text-red-700
-                        text-xs font-semibold">
-              🕘 Entrega estimada: Mañana a partir de las 9 AM
+                        text-xs font-semibold
+                        flex items-center gap-2">
+              
+              <i data-lucide="truck" class="w-4 h-4"></i>
+              Entrega estimada: Hoy antes de las 9 PM
             </div>
           `;
+
+        }
+
+       
+        else if (hora < horaApertura) {
+
+          mensajeHorario = `
+            <div class="mt-2 px-3 py-2 rounded-lg
+                        bg-amber-100 text-amber-800
+                        text-xs font-semibold
+                        flex items-center gap-2">
+              
+              <i data-lucide="clock" class="w-4 h-4"></i>
+              Entrega estimada: Hoy a partir de las 9 AM
+            </div>
+          `;
+
+        }
+
+        
+        else {
+
+          mensajeHorario = `
+            <div class="mt-2 px-3 py-2 rounded-lg
+                        bg-red-100 text-red-700
+                        text-xs font-semibold
+                        flex items-center gap-2">
+              
+              <i data-lucide="moon" class="w-4 h-4"></i>
+              Entrega estimada: Mañana a partir de las 9 AM
+            </div>
+          `;
+
+        }
 
         mensajeExtra.innerHTML = `
           Te faltan 
@@ -1010,6 +1120,12 @@ function actualizarEnvio(precio) {
           para envío gratis
           ${mensajeHorario}
         `;
+
+        
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+
       }
 
     }
@@ -1256,19 +1372,24 @@ function actualizarContador() {
 
 document.addEventListener("click", e => {
 
-  if (e.target.id === "lbClose" || e.target.id === "lightbox") {
+  const btnPrev = e.target.closest("#lbPrev");
+  const btnNext = e.target.closest("#lbNext");
+  const btnClose = e.target.closest("#lbClose");
+
+  if (btnClose || e.target.id === "lightbox") {
     cerrarLightbox();
   }
 
-  if (e.target.id === "lbPrev") {
+  if (btnPrev) {
     cambiarLightbox(-1);
   }
 
-  if (e.target.id === "lbNext") {
+  if (btnNext) {
     cambiarLightbox(1);
   }
 
 });
+
 
 /* ================= TECLADO ================= */
 
@@ -1304,34 +1425,30 @@ document.addEventListener("touchend", e => {
 /* =========================================================
    DESCRIPCIÓN COLAPSABLE (TAB)
 ========================================================= */
+      document.addEventListener("click", e => {
 
-document.addEventListener("click", e => {
+        const btn = e.target.closest("#btnToggleDescTab");
+        if (!btn) return;
 
-  if (e.target.closest("#btnToggleDescTab")) {
+        const resumen = document.getElementById("descResumenTab");
+        const completa = document.getElementById("descCompletaTab");
 
-    const resumen = document.getElementById("descResumenTab");
-    const completa = document.getElementById("descCompletaTab");
-    const txt = document.getElementById("txtToggleDesc");
-    const icon = document.getElementById("iconToggleDesc");
+        if (!resumen || !completa) return;
 
-    if (!resumen || !completa) return;
+        const abierta = !completa.classList.contains("hidden");
 
-    const abierta = !completa.classList.contains("hidden");
+        if (abierta) {
+          completa.classList.add("hidden");
+          resumen.classList.remove("hidden");
+          btn.textContent = "Ver más";
+        } else {
+          completa.classList.remove("hidden");
+          resumen.classList.add("hidden");
+          btn.textContent = "Ver menos";
+        }
 
-    if (abierta) {
-      completa.classList.add("hidden");
-      resumen.classList.remove("hidden");
-      if (txt) txt.textContent = "Ver más";
-      if (icon) icon.classList.remove("rotate-180");
-    } else {
-      completa.classList.remove("hidden");
-      resumen.classList.add("hidden");
-      if (txt) txt.textContent = "Ver menos";
-      if (icon) icon.classList.add("rotate-180");
-    }
-  }
+      });
 
-});
 
 document.addEventListener("click", e => {
 
@@ -1354,6 +1471,72 @@ document.addEventListener("click", e => {
       resumen.classList.add("hidden");
       btn.textContent = "Ver menos";
     }
+  }
+
+});
+
+/* =========================================================
+   MODAL DETALLE FULLSCREEN
+========================================================= */
+
+document.addEventListener("click", e => {
+
+  const modal = document.getElementById("modalDetalle");
+  if (!modal) return;
+
+  /* ================= ABRIR ================= */
+ if (e.target.id === "btnAbrirDetalle") {
+
+  const modal = document.getElementById("modalDetalle");
+  if (!modal) return;
+
+  // 👉 Agregar estado al historial
+  history.pushState({ modalDetalle: true }, "");
+
+  modal.classList.remove("hidden");
+
+  setTimeout(() => {
+    modal.classList.remove("translate-y-full");
+    modal.classList.add("flex");
+  }, 10);
+
+  document.body.classList.add("overflow-hidden");
+}
+
+  /* ================= CERRAR ================= */
+  if (e.target.id === "cerrarDetalle") {
+
+    modal.classList.add("translate-y-full");
+
+    setTimeout(() => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }, 300);
+
+    document.body.classList.remove("overflow-hidden");
+  }
+
+});
+
+/* =========================================================
+   HISTORIAL PARA MODAL DETALLE (MÓVIL BACK FIX)
+========================================================= */
+
+window.addEventListener("popstate", event => {
+
+  const modal = document.getElementById("modalDetalle");
+  if (!modal) return;
+
+  if (!modal.classList.contains("hidden")) {
+
+    modal.classList.add("translate-y-full");
+
+    setTimeout(() => {
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }, 300);
+
+    document.body.classList.remove("overflow-hidden");
   }
 
 });

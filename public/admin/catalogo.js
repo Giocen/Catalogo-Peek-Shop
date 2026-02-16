@@ -546,17 +546,29 @@ if (btnGuardar) btnGuardar.onclick = async () => {
     };
 
 
-   const productoId = await guardarProducto({
-      supabase,
-      productoActual,
-      payload,
-      presentaciones: getPresentaciones(),
-      media,
-      generarSKU,
-      obtenerPrecioBase,
-      subirMediaSupabase,
-      swalError
-    });
+    let listaPresentaciones = getPresentaciones();
+
+      if (!es_oferta.checked) {
+        listaPresentaciones = listaPresentaciones.map(p => ({
+          ...p,
+          en_oferta: false,
+          precio_oferta: null
+        }));
+      }
+
+      const productoId = await guardarProducto({
+        supabase,
+        productoActual,
+        payload,
+        presentaciones: listaPresentaciones,
+        media,
+        generarSKU,
+        obtenerPrecioBase,
+        subirMediaSupabase,
+        swalError
+      });
+
+    
 
     swalOk("Producto guardado correctamente");
     cerrar();
@@ -712,7 +724,6 @@ window.actualizarCampoPresentacion = (el, campo) => {
 
   setPresentaciones(lista);
 
-  renderPresentaciones(presentacionesDiv);
 };
 
 /* ================= EDITAR ================= */

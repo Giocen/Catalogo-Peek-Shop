@@ -89,12 +89,17 @@ export function abrirCarrito() {
 /* ================= AGREGAR ================= */
   export function agregarAlCarrito(producto) {
 
+    producto.presentacion_id = producto.presentacion_id || null;
+    producto.color = producto.color || null;
+
+
     const carrito = getCarrito();
     const p = carrito.find(i =>
       i.id === producto.id &&
       i.presentacion_id === producto.presentacion_id &&
       i.color === producto.color
     );
+
 
     if (p) {
       p.cantidad++;
@@ -406,7 +411,8 @@ function renderItems() {
           ">
 
             <button 
-              onclick="_cartMinus('${p.id}','${p.presentacion_id}','${p.color || ""}')"
+              onclick="_cartMinus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})"
+
               style="
                 width:36px;
                 height:36px;
@@ -429,7 +435,7 @@ function renderItems() {
             </div>
 
             <button 
-              onclick="_cartPlus('${p.id}','${p.presentacion_id}','${p.color || ""}')"
+              onclick="_cartPlus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})"
               style="
                 width:36px;
                 height:36px;
@@ -448,7 +454,8 @@ function renderItems() {
         <div style="text-align:right">
           <div style="font-weight:700">$${t}</div>
           <button
-            onclick="_cartDel('${p.id}','${p.presentacion_id}','${p.color || ""}')"
+            onclick="_cartDel('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})"
+
             style="
               color:#dc2626;
               font-size:12px;
@@ -508,55 +515,55 @@ function renderItems() {
 /* ================= ACCIONES ================= */
   window._cartPlus = (id, presId, color) => {
 
-  let carrito = getCarrito();
+    let carrito = getCarrito();
 
-  const p = carrito.find(i =>
-    i.id === id &&
-    (!presId || i.presentacion_id === presId) &&
-    (!color || i.color === color)
-  );
+    const p = carrito.find(i =>
+      i.id === id &&
+      i.presentacion_id === (presId || null) &&
+      i.color === (color || null)
+    );
 
-  if (!p) return;
+    if (!p) return;
 
-  p.cantidad++;
-  setCarrito(carrito);
-  guardar();
-  renderItems();
-};
+    p.cantidad++;
 
-  window._cartMinus = (id, presId, color) => {
+    setCarrito(carrito);
+    guardar();
+    renderItems();
+  };
 
-  let carrito = getCarrito();
+window._cartMinus = (id, presId, color) => {
 
-  const index = carrito.findIndex(i =>
-    i.id === id &&
-    (!presId || i.presentacion_id === presId) &&
-    (!color || i.color === color)
-  );
+      let carrito = getCarrito();
 
-  if (index === -1) return;
+      const index = carrito.findIndex(i =>
+        i.id === id &&
+        i.presentacion_id === (presId || null) &&
+        i.color === (color || null)
+      );
 
-  carrito[index].cantidad--;
+      if (index === -1) return;
 
-  if (carrito[index].cantidad <= 0) {
-    carrito.splice(index, 1);
-  }
+      carrito[index].cantidad--;
 
-  setCarrito(carrito);
-  guardar();
-  renderItems();
-};
+      if (carrito[index].cantidad <= 0) {
+        carrito.splice(index, 1);
+      }
+
+      setCarrito(carrito);
+      guardar();
+      renderItems();
+    };
 
 window._cartDel = (id, presId, color) => {
 
   let carrito = getCarrito();
 
   carrito = carrito.filter(i =>
-
     !(
       i.id === id &&
-      (!presId || i.presentacion_id === presId) &&
-      (!color || i.color === color)
+      i.presentacion_id === (presId || null) &&
+      i.color === (color || null)
     )
   );
 
@@ -564,6 +571,7 @@ window._cartDel = (id, presId, color) => {
   guardar();
   renderItems();
 };
+
 
 window._setEntrega = tipo => {
   tipoEntrega = tipo;
@@ -663,7 +671,7 @@ window.pedirDatosCliente = pedirDatosCliente;
 
 /* ================= WHATS ================= */
 function enviarWhats(cliente, numeroPedido, totales) {
-    let msg = `PEDIDO PEEKSHOP\n\n`;
+    let msg = `PEDIDO PEEK SHOP\n\n`;
 
     msg += `Pedido: ${numeroPedido}\n`;
     msg += `Cliente: ${cliente.nombre}\n`;
@@ -696,7 +704,7 @@ function enviarWhats(cliente, numeroPedido, totales) {
     
   
     window.open(
-      `https://wa.me/529992328261?text=${encodeURIComponent(msg)}`,
+      `https://wa.me/529991494268?text=${encodeURIComponent(msg)}`,
       "_blank"
     );
   
@@ -794,12 +802,18 @@ guardar();
     return `PK-${y}${m}${d}-${r}`;
   }
 
-    function calcularTotales(productos) {
-    let subtotal = 0;
+  function calcularTotales(productos = []) {
 
-    productos.forEach(p => {
-      subtotal += Number(p.precio) * Number(p.cantidad);
-    });
+  if (!Array.isArray(productos)) {
+    console.warn("calcularTotales recibió algo inválido:", productos);
+    return { subtotal: 0, envio: 0, total: 0 };
+  }
+
+  let subtotal = 0;
+
+  productos.forEach(p => {
+    subtotal += Number(p.precio) * Number(p.cantidad);
+  });
 
   const zona = localStorage.getItem("zona_envio") || "Caucel";
 
@@ -811,9 +825,6 @@ guardar();
   else if (zona === "Caucel") {
     envio = subtotal >= 400 ? 0 : 25;
   }
-  else {
-    envio = 0; // Mérida se cotiza aparte
-  }
 
   return {
     subtotal,
@@ -821,14 +832,17 @@ guardar();
     total: subtotal + envio
   };
 }
-  
-  function mostrarResumenPedido(cliente, esCompraDirecta = false) {
 
-  const totales = calcularTotales();  
+  
+ function mostrarResumenPedido(cliente, esCompraDirecta = false) {
+
+  const productos =
+    esCompraDirecta && window._compraTemporal
+      ? window._compraTemporal
+      : getCarrito();
+
+  const totales = calcularTotales(productos);  // ✅ ahora sí se pasa el array
   const numeroPedido = generarNumeroPedido();
-  const productos = esCompraDirecta && window._compraTemporal
-  ? window._compraTemporal
-  : getCarrito();
 
   Swal.fire({
     width: 480,
@@ -922,8 +936,8 @@ guardar();
 
     enviarWhats(cliente, numeroPedido, totales);
   });
-
 }
+
   
   async function guardarPedidoSupabase({ numeroPedido, cliente, totales }) {
     await supabase.from("pedidos").insert({
