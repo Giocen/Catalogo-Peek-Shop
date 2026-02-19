@@ -26,7 +26,9 @@ export function crearPresentacionBase() {
   };
 }
 
-/* 🔧 CÁLCULO DE MARGEN */
+/* =========================================================
+   🔧 CÁLCULO DE MARGEN (SE MANTIENE IGUAL)
+========================================================= */
 function calcularMargen(p) {
   const costo = Number(p.costo);
   const precio = Number(p.precio);
@@ -38,7 +40,12 @@ function calcularMargen(p) {
   }
 }
 
+/* =========================================================
+   🎨 RENDER PRINCIPAL
+========================================================= */
 export function renderPresentaciones(container) {
+
+  container.innerHTML = "";
 
   if (!presentaciones.length) {
     container.innerHTML = `
@@ -50,126 +57,191 @@ export function renderPresentaciones(container) {
     return;
   }
 
-  container.innerHTML = presentaciones.map((p, i) => {
-
-    calcularMargen(p);
-
-    return `
-      <div class="border rounded p-4 space-y-2 bg-gray-50">
-
-        <input class="input"
-          placeholder="Nombre (Collar, Bulto 20kg)"
-          value="${p.nombre}"
-          data-index="${i}"
-          onchange="window.actualizarCampoPresentacion(this,'nombre')">
-
-        <input class="input text-sm"
-          placeholder="Detalle corto (opcional)"
-          value="${p.detalle || ""}"
-          data-index="${i}"
-          onchange="window.actualizarCampoPresentacion(this,'detalle')">
-
-        <div class="grid grid-cols-2 gap-2">
-
-          <div>
-            <label class="text-xs text-slate-500">Unidad</label>
-            <select class="input"
-              data-index="${i}"
-              onchange="window.actualizarCampoPresentacion(this,'unidad')">
-              <option ${p.unidad==="pieza"?"selected":""}>pieza</option>
-              <option ${p.unidad==="kilo"?"selected":""}>kilo</option>
-              <option ${p.unidad==="bulto"?"selected":""}>bulto</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-500">Variante / Tamaño</label>
-            <input class="input"
-              value="${p.talla}"
-              data-index="${i}"
-              onchange="window.actualizarCampoPresentacion(this,'talla')">
-          </div>
-
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <input type="number" class="input"
-            placeholder="Costo"
-            value="${p.costo}"
-            data-index="${i}"
-            oninput="window.actualizarCampoPresentacion(this,'costo')">
-
-          <input type="number" class="input"
-            placeholder="Precio venta"
-            value="${p.precio}"
-            data-index="${i}"
-            oninput="window.actualizarCampoPresentacion(this,'precio')">
-        </div>
-
-        <div class="text-xs text-gray-600 info-margen">
-          Ganancia:
-          <b>$${((Number(p.precio) - Number(p.costo)) || 0)}</b> |
-          Margen:
-          <b>${p.margen}%</b>
-        </div>
-
-        <div class="flex items-center gap-2 text-sm">
-          <input type="checkbox"
-            ${p.en_oferta ? "checked" : ""}
-            data-index="${i}"
-            onchange="window.actualizarCampoPresentacion(this,'en_oferta')">
-          <span>En oferta</span>
-        </div>
-
-        ${p.en_oferta ? `
-          <input type="number" class="input"
-            placeholder="Precio oferta"
-            value="${p.precio_oferta}"
-            data-index="${i}"
-            onchange="window.actualizarCampoPresentacion(this,'precio_oferta')">
-        ` : ""}
-
-        <div class="grid grid-cols-2 gap-2">
-          <input type="number" class="input"
-            placeholder="Stock"
-            value="${p.stock}"
-            data-index="${i}"
-            onchange="window.actualizarCampoPresentacion(this,'stock')">
-
-          <div class="flex items-center gap-2 text-sm">
-            <input type="checkbox"
-              ${p.activo ? "checked" : ""}
-              data-index="${i}"
-              onchange="window.actualizarCampoPresentacion(this,'activo')">
-            <span>Activa</span>
-          </div>
-        </div>
-
-        <button onclick="window.eliminarPresentacion(${i})"
-          class="text-red-600 text-sm">
-          Eliminar
-        </button>
-
-      </div>
-    `;
-  }).join("");
+  presentaciones.forEach((p, i) => {
+    const card = crearCardPresentacion(p, i, container);
+    container.appendChild(card);
+  });
 }
 
-window.actualizarCampoPresentacion = (el, campo) => {
+/* =========================================================
+   🧩 COMPONENTE PRESENTACIÓN
+========================================================= */
+function crearCardPresentacion(p, i, container) {
 
-  const i = Number(el.dataset.index);
-  if (!presentaciones[i]) return;
+  const card = document.createElement("div");
+  card.className = "border rounded p-4 space-y-2 bg-gray-50";
 
-  presentaciones[i][campo] =
-    el.type === "checkbox" ? el.checked : el.value;
+  /* ================= NOMBRE ================= */
+  const inputNombre = crearInput("text", "input",
+    "Nombre (Collar, Bulto 20kg)", p.nombre);
+  inputNombre.addEventListener("input", e => {
+    p.nombre = e.target.value;
+  });
+  card.appendChild(inputNombre);
 
-  if (campo === "costo" || campo === "precio") {
-    calcularMargen(presentaciones[i]);
+  /* ================= DETALLE ================= */
+  const inputDetalle = crearInput("text", "input text-sm",
+    "Detalle corto (opcional)", p.detalle || "");
+  inputDetalle.addEventListener("input", e => {
+    p.detalle = e.target.value;
+  });
+  card.appendChild(inputDetalle);
+
+  /* ================= UNIDAD + TALLA ================= */
+  const gridVariante = document.createElement("div");
+  gridVariante.className = "grid grid-cols-2 gap-2";
+
+  const selectUnidad = document.createElement("select");
+  selectUnidad.className = "input";
+
+  ["pieza", "kilo", "bulto"].forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt;
+    o.textContent = opt;
+    if (p.unidad === opt) o.selected = true;
+    selectUnidad.appendChild(o);
+  });
+
+  selectUnidad.addEventListener("change", e => {
+    p.unidad = e.target.value;
+  });
+
+  const inputTalla = crearInput("text", "input",
+    "Variante / Tamaño", p.talla);
+  inputTalla.addEventListener("input", e => {
+    p.talla = e.target.value;
+  });
+
+  gridVariante.appendChild(selectUnidad);
+  gridVariante.appendChild(inputTalla);
+  card.appendChild(gridVariante);
+
+  /* ================= COSTO / PRECIO ================= */
+  const gridPrecios = document.createElement("div");
+  gridPrecios.className = "grid grid-cols-2 gap-2";
+
+  const inputCosto = crearInput("number", "input", "Costo", p.costo);
+  const inputPrecio = crearInput("number", "input", "Precio venta", p.precio);
+
+  gridPrecios.appendChild(inputCosto);
+  gridPrecios.appendChild(inputPrecio);
+  card.appendChild(gridPrecios);
+
+  /* ================= MARGEN ================= */
+  const infoMargen = document.createElement("div");
+  infoMargen.className = "text-xs text-gray-600";
+
+  function actualizarMargenUI() {
+    calcularMargen(p);
+
+    const ganancia =
+      (Number(p.precio) - Number(p.costo)) || 0;
+
+    infoMargen.innerHTML = `
+      Ganancia:
+      <b>$${ganancia}</b> |
+      Margen:
+      <b>${p.margen}%</b>
+    `;
   }
-};
 
-window.eliminarPresentacion = (i) => {
-  presentaciones.splice(i, 1);
-  const container = document.getElementById("presentaciones");
-  renderPresentaciones(container);
-};
+  inputCosto.addEventListener("input", e => {
+    p.costo = e.target.value === "" ? "" : Number(e.target.value);
+    actualizarMargenUI();
+  });
+
+  inputPrecio.addEventListener("input", e => {
+    p.precio = e.target.value === "" ? "" : Number(e.target.value);
+    actualizarMargenUI();
+  });
+
+  actualizarMargenUI();
+  card.appendChild(infoMargen);
+
+  /* ================= OFERTA ================= */
+  const divOferta = document.createElement("div");
+  divOferta.className = "flex items-center gap-2 text-sm";
+
+  const chkOferta = document.createElement("input");
+  chkOferta.type = "checkbox";
+  chkOferta.checked = p.en_oferta;
+
+  const spanOferta = document.createElement("span");
+  spanOferta.textContent = "En oferta";
+
+  divOferta.appendChild(chkOferta);
+  divOferta.appendChild(spanOferta);
+  card.appendChild(divOferta);
+
+  const inputOferta = crearInput("number", "input",
+    "Precio oferta", p.precio_oferta);
+  inputOferta.style.display = p.en_oferta ? "block" : "none";
+
+  chkOferta.addEventListener("change", e => {
+    p.en_oferta = e.target.checked;
+    inputOferta.style.display =
+      p.en_oferta ? "block" : "none";
+  });
+
+  inputOferta.addEventListener("input", e => {
+    p.precio_oferta =
+      e.target.value === "" ? "" : Number(e.target.value);
+  });
+
+  card.appendChild(inputOferta);
+
+  /* ================= STOCK + ACTIVO ================= */
+  const gridStock = document.createElement("div");
+  gridStock.className = "grid grid-cols-2 gap-2";
+
+  const inputStock = crearInput("number", "input", "Stock", p.stock);
+  inputStock.addEventListener("input", e => {
+    p.stock = Number(e.target.value) || 0;
+  });
+
+  const divActivo = document.createElement("div");
+  divActivo.className = "flex items-center gap-2 text-sm";
+
+  const chkActivo = document.createElement("input");
+  chkActivo.type = "checkbox";
+  chkActivo.checked = p.activo;
+  chkActivo.addEventListener("change", e => {
+    p.activo = e.target.checked;
+  });
+
+  const spanActivo = document.createElement("span");
+  spanActivo.textContent = "Activa";
+
+  divActivo.appendChild(chkActivo);
+  divActivo.appendChild(spanActivo);
+
+  gridStock.appendChild(inputStock);
+  gridStock.appendChild(divActivo);
+  card.appendChild(gridStock);
+
+  /* ================= ELIMINAR ================= */
+  const btnEliminar = document.createElement("button");
+  btnEliminar.textContent = "Eliminar";
+  btnEliminar.className = "text-red-600 text-sm";
+
+  btnEliminar.addEventListener("click", () => {
+    presentaciones.splice(i, 1);
+    renderPresentaciones(container);
+  });
+
+  card.appendChild(btnEliminar);
+
+  return card;
+}
+
+/* =========================================================
+   🛠 HELPER INPUT
+========================================================= */
+function crearInput(type, className, placeholder, value) {
+  const input = document.createElement("input");
+  input.type = type;
+  input.className = className;
+  input.placeholder = placeholder;
+  input.value = value ?? "";
+  return input;
+}

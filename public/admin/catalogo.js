@@ -65,20 +65,31 @@ const fileInputMedia = document.getElementById("fileInputMedia");
 const btnAdjuntarMedia = document.getElementById("btnAdjuntarMedia");
 const marca = document.getElementById("marca");
 
-/* 🔐 PROTECCIÓN */
-let authChecked = false;
 
-onAuthStateChanged(auth, u => {
-  if (authChecked) return;
-  authChecked = true;
 
-  if (!u) { 
+
+let authResolved = false;
+
+
+if (auth.currentUser) {
+  document.body.classList.remove("hidden");
+}
+
+onAuthStateChanged(auth, user => {
+
+  if (authResolved) return;
+  authResolved = true;
+
+  if (!user) {
     location.replace("login.html");
-  } else {
-    document.body.classList.remove("hidden");
-    cargar();
+    return;
   }
+
+  
+  document.body.classList.remove("hidden");
+  cargar();
 });
+
 
 
 /* ================= PEGADO GLOBAL DE IMÁGENES ================= */
@@ -375,6 +386,7 @@ function renderMedia() {
       </div>
     `;
   }).join("");
+
 }
 
 
@@ -628,8 +640,7 @@ if (btnNuevo) btnNuevo.onclick = () => {
   renderStock();
   renderPresentaciones(presentacionesDiv);
 
-  modal.classList.remove("hidden");
-  history.pushState({ modalAbierto: true }, "");
+  modal.classList.remove("hidden"); 
 
 
   setTimeout(() => dropZone.focus(), 100);
@@ -640,10 +651,6 @@ window.cerrar = () => {
 
   if (!modal.classList.contains("hidden")) {
     modal.classList.add("hidden");
-
-    if (history.state?.modalAbierto) {
-      history.back(); // 👈 regresamos un paso sin salir
-    }
   }
 
   productoActual = null;
@@ -871,9 +878,10 @@ function renderTabla() {
   
         return `
         <tr
-          onclick="editarProducto('${p.id}')"
-          class="cursor-pointer hover:bg-slate-50 border-b"
+          data-id="${p.id}"
+          class="fila-producto cursor-pointer hover:bg-slate-50 border-b"
         >
+
       
          <td class="px-3 py-2">
           <div
@@ -930,6 +938,19 @@ function renderTabla() {
       `;
       
   }).join("");
+
+  
+document.querySelectorAll(".fila-producto").forEach(tr => {
+  tr.addEventListener("click", (e) => {
+
+    
+    if (window.getSelection().toString().length > 0) return;
+
+    const id = tr.dataset.id;
+    editarProducto(id);
+  });
+});
+
   
 }
 
@@ -1047,12 +1068,19 @@ document.querySelectorAll("[data-cerrar]").forEach(btn => {
   });
 });
 
-// click fuera (overlay)
-modal.addEventListener("click", e => {
-  if (e.target === modal) {
-    cerrar();
-  }
-});
+  let mouseDownEnOverlay = false;
+
+  modal.addEventListener("mousedown", e => {
+    mouseDownEnOverlay = (e.target === modal);
+  });
+
+  modal.addEventListener("mouseup", e => {
+    if (mouseDownEnOverlay && e.target === modal) {
+      cerrar();
+    }
+    mouseDownEnOverlay = false;
+  });
+
 
 // evita cerrar cuando se hace click dentro del contenido
 const modalContent = modal.firstElementChild;

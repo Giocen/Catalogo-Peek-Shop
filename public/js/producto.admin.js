@@ -66,15 +66,18 @@ function activarCamposEditables() {
         }
       }
 
-      input.value = original;
-      el.innerHTML = "";
-      el.appendChild(input);
-      input.focus();
-
       input.onblur = () => {
         el.dataset.editing = "0";
-        el.innerText = input.value.trim() || "—";
+
+        const value = input.value.trim();
+
+        if (!value) {
+          el.innerText = el.dataset.type === "number" ? "0" : "—";
+        } else {
+          el.innerText = value;
+        }
       };
+
     });
   });
 }

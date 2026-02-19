@@ -695,7 +695,15 @@ async function cargarRelacionados(categoria, actualId) {
 
   const { data: productos } = await supabase
     .from("catalogo_productos")
-    .select("id,nombre,precio")
+    .select(`
+        id,
+        nombre,
+        precio,
+        catalogo_presentaciones (
+          id,
+          precio
+        )
+      `)
     .eq("categoria", categoria)
     .neq("id", actualId)
     .eq("activo", true)
@@ -713,37 +721,66 @@ async function cargarRelacionados(categoria, actualId) {
     .select("producto_id,url,orden")
     .in("producto_id", ids);
 
-  relacionadosDiv.innerHTML = productos.map(p => {
-    const img = media
-      ?.filter(m => m.producto_id === p.id)
-      ?.sort((a,b)=>(a.orden ?? 0)-(b.orden ?? 0))[0]
-      ?.url || "/img/placeholder.png";
+ relacionadosDiv.innerHTML = productos.map(p => {
+
+      const totalPresentaciones = p.catalogo_presentaciones?.length || 0;
+      const tieneVariantes = totalPresentaciones > 1;
+
+      const precios = p.catalogo_presentaciones?.map(v => Number(v.precio)) || [];
+      const precioMin = precios.length ? Math.min(...precios) : p.precio;
+      const precioMax = precios.length ? Math.max(...precios) : p.precio;
+
+      const img = media
+        ?.filter(m => m.producto_id === p.id)
+        ?.sort((a,b)=>(a.orden ?? 0)-(b.orden ?? 0))[0]
+        ?.url || "/img/placeholder.png";
 
       return `
-          <a href="/producto.html?id=${p.id}"
-            class="block bg-white rounded-lg shadow 
-                    hover:shadow-lg transition group">
+        <a href="/producto.html?id=${p.id}"
+          class="block bg-white rounded-lg shadow 
+                  hover:shadow-lg transition group p-3">
 
-            <img src="${img}" 
-                class="h-40 w-full object-contain p-3
-                        transition-transform duration-300
-                        group-hover:scale-105">
+          <img src="${img}" 
+              class="h-40 w-full object-contain
+                      transition-transform duration-300
+                      group-hover:scale-105">
 
-            <div class="p-3">
-              <div class="text-sm line-clamp-2">
-                ${p.nombre}
-              </div>
+          <div class="mt-2">
 
-              <div class="font-bold mt-1 text-green-700">
-                $${p.precio}
-              </div>
+            <div class="text-sm line-clamp-2">
+              ${p.nombre}
             </div>
 
-          </a>
-        `;
+            <div class="font-bold mt-1 text-green-700">
+              ${
+                precioMin !== precioMax
+                  ? `$${precioMin} – $${precioMax}`
+                  : `$${precioMin}`
+              }
+            </div>
 
-  }).join("");
-}
+            ${
+              tieneVariantes
+                ? `<div class="text-xs text-blue-600 mt-1">
+                    Disponible en ${totalPresentaciones} presentaciones
+                  </div>`
+                : ""
+            }
+
+            ${
+              tieneVariantes
+                ? `<div class="mt-2 bg-blue-600 text-white text-xs py-2 rounded-lg text-center">
+                    Ver opciones
+                  </div>`
+                : ""
+            }
+
+          </div>
+        </a>
+      `;
+    }).join("");
+
+    }
 
 /* =========================================================
    RENDER COMPONENTES

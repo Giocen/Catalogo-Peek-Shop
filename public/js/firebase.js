@@ -1,7 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-// Configuración de Firebase (la que te dio Firebase)
 const firebaseConfig = {
   apiKey: "AIzaSyDEfGdlBStoWgTRA5szQz908-Mmj229MTs",
   authDomain: "catalogo-peek-shop.firebaseapp.com",
@@ -11,8 +14,15 @@ const firebaseConfig = {
   appId: "1:751626538167:web:9327f5c0e6072824a25132"
 };
 
-// Inicializar Firebase
 export const app = initializeApp(firebaseConfig);
 
-// 🔐 Auth (LO QUE SÍ USAMOS)
 export const auth = getAuth(app);
+
+/* 🔥 FORZAR PERSISTENCIA ESTABLE */
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("✅ Persistencia establecida en LOCAL");
+  })
+  .catch((error) => {
+    console.warn("⚠️ Persistencia falló:", error);
+  });

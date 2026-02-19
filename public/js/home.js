@@ -93,7 +93,7 @@ async function cargarCatalogo() {
   }
 
   try {
-    const { data, error } = await supabase
+      const { data, error } = await supabase
       .from("catalogo_productos")
       .select(`
         id,
@@ -103,7 +103,12 @@ async function cargarCatalogo() {
         precio_anterior,
         categoria,
         marca,
-        catalogo_multimedia(url, tipo),
+        catalogo_multimedia (
+          id,
+          url,
+          tipo,
+          orden
+        ),
         catalogo_presentaciones(
           id,
           nombre,
@@ -112,9 +117,8 @@ async function cargarCatalogo() {
           en_oferta
         )
       `)
-
-
       .eq("activo", true);
+
 
     if (error) throw error;
 
@@ -163,9 +167,15 @@ function renderProductos(productos) {
   contenedor.innerHTML = productos
     .map(p => {
 
+      const imagenOrdenada =
+        p.catalogo_multimedia
+          ?.filter(m => m.tipo === "imagen")
+          ?.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+
       const img =
-        p.catalogo_multimedia?.find(m => m.tipo === "imagen")?.url ||
+        imagenOrdenada?.[0]?.url ||
         "/img/placeholder.png";
+
 
       let precioMin = p.precio;
       let precioMax = p.precio;
