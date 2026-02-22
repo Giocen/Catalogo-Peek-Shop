@@ -435,7 +435,10 @@ setTimeout(() => {
           if (!p.categoria) return "";
           return `
             <div class="mb-4 text-sm text-blue-600">
-              <a href="/" class="hover:underline">← Volver</a>
+              <a href="/?categoria=${encodeURIComponent(p.categoria)}"
+              class="hover:underline">
+              ← Volver
+            </a>
               <span class="mx-2">›</span>
               ${p.categoria}
             </div>`;

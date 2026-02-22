@@ -213,8 +213,10 @@
           </div>
     </div>
 
-    <!-- CATEGORÍA -->
-    <div class="mt-4 grid grid-cols-2 gap-2">
+   <!-- CATEGORÍA + TIPO MASCOTA -->
+    <div class="mt-4 grid grid-cols-3 gap-2">
+
+      <!-- Categoría existente -->
       <select id="categoria" class="input">
         <option value="">Selecciona categoría</option>
         <option>Alimentos</option>
@@ -223,8 +225,27 @@
         <option>Higiene</option>
         <option>Salud</option>
       </select>
-      <input id="categoriaNueva" class="input" placeholder="Nueva categoría">
+
+      <!-- Nueva categoría -->
+      <input
+        id="categoriaNueva"
+        class="input"
+        placeholder="Nueva categoría"
+      >
+
+      <!-- Tipo de mascota -->
+      <input
+        id="tipoMascota"
+        class="input"
+        placeholder="Tipo mascota (Ej. Perro)"
+        list="listaMascotas"
+      >
+
     </div>
+
+    <!-- Historial dinámico -->
+    <datalist id="listaMascotas"></datalist>
+
 
     <!-- ESTADO -->
     <div class="flex gap-6 mt-4">
@@ -260,6 +281,21 @@
     <h3 class="section-title">🎨 Colores</h3>
     <div id="colorPicker" class="flex gap-3 mt-2"></div>
     <div id="stockPorColor" class="space-y-2 mt-2"></div>
+
+    <div class="flex items-center gap-3 mt-3">
+      <input
+        type="color"
+        id="colorLibre"
+        class="w-12 h-12 rounded cursor-pointer border"
+      >
+      <button
+        id="btnAgregarColorLibre"
+        type="button"
+        class="px-3 py-1 bg-slate-200 rounded text-sm hover:bg-slate-300">
+        Agregar color
+      </button>
+    </div>
+
 
     <!-- MEDIA -->
     <hr class="divider">

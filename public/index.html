@@ -104,9 +104,30 @@
 <!-- ================= CONTENIDO ================= -->
 <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 px-4">
 
-  <aside class="hidden md:block bg-white rounded-2xl shadow-sm p-5 h-fit">
-    <h3 class="font-bold mb-4 text-lg">Filtros</h3>
-    <div id="zona-lateral-izq" class="space-y-4"></div>
+  <aside id="sidebarCategorias"
+    class="hidden md:block bg-white rounded-2xl shadow-sm p-5 h-fit w-[240px]">
+
+    <h3 class="font-bold mb-4 text-lg flex items-center gap-2">
+      <i data-lucide="grid-2x2" class="w-4 h-4"></i>
+      Categorías
+    </h3>
+
+    <div id="menuCategorias" class="space-y-2"></div>
+
+    <div class="mt-6">
+      <h4 class="font-semibold mb-2 text-sm">Precio</h4>
+
+      <input type="number"
+        id="precioMin"
+        placeholder="Mínimo"
+        class="w-full mb-2 border rounded px-2 py-1 text-sm">
+
+      <input type="number"
+        id="precioMax"
+        placeholder="Máximo"
+        class="w-full border rounded px-2 py-1 text-sm">
+    </div>
+
   </aside>
 
   <main class="pb-28">
@@ -115,6 +136,21 @@
     <div id="categorias"
          class="flex gap-2 overflow-x-auto mb-6 pb-2">
     </div>
+
+     <div id="breadcrumbCategoria"
+     class="text-sm text-gray-500 mb-4 px-1"></div>
+
+     <div class="flex justify-between items-center mb-4">
+        <div id="contadorResultados"
+            class="text-sm text-gray-500"></div>
+
+        <select id="ordenar"
+          class="border rounded-lg text-sm px-3 py-2">
+          <option value="relevancia">Relevancia</option>
+          <option value="precio-asc">Menor precio</option>
+          <option value="precio-desc">Mayor precio</option>
+        </select>
+      </div>
 
     <!-- Productos -->
     <div id="productos"
@@ -137,7 +173,8 @@
     Inicio
   </button>
 
-  <button onclick="scrollToCategorias()"
+ 
+  <button onclick="abrirPanelCategorias()"
           class="flex flex-col items-center text-xs text-gray-600 active:text-yellow-600 transition">
     <i data-lucide="grid-2x2" class="w-5 h-5 mb-1"></i>
     Categorías
@@ -179,6 +216,25 @@ lucide.createIcons();
 </script>
 
 <div id="cart-portal"></div>
+
+<!-- ================= PANEL CATEGORÍAS MÓVIL ================= -->
+<div id="panelCategoriasMobile"
+  class="fixed inset-0 bg-black/40 z-50 hidden">
+
+  <div class="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl
+              transform -translate-x-full transition duration-300"
+       id="panelCategoriasContenido">
+
+    <div class="p-4 border-b flex justify-between items-center">
+      <h3 class="font-semibold">Categorías</h3>
+      <button onclick="cerrarPanelCategorias()">✕</button>
+    </div>
+
+    <div id="menuCategoriasMobile" class="p-4 space-y-2"></div>
+
+  </div>
+</div>
+
 
 </body>
 </html>

@@ -14,8 +14,6 @@ export async function guardarProducto({
 
   let productoId = productoActual;
 
-  
-/* ================= PRODUCTO ================= */
 
 /* ================= PRODUCTO ================= */
 

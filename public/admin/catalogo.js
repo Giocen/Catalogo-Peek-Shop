@@ -153,6 +153,7 @@ const notas = document.getElementById("notas");
 /* ================= CATEGORÍA ================= */
 const categoria = document.getElementById("categoria");
 const categoriaNueva = document.getElementById("categoriaNueva");
+const tipoMascota = document.getElementById("tipoMascota");
 
 /* ================= MULTIMEDIA ================= */
 const mediaLista = document.getElementById("mediaLista");
@@ -329,15 +330,25 @@ window.quitarColor = (n) => {
   renderStock();
 };
 
-//btnAgregarColorLibre.onclick = () => {
-  //const hex = colorLibre.value;
-  //const name = hex.toUpperCase();
- // if (colores.find(c => c.nombre === name)) return;
-  //colores.push({ nombre: name, hex });
- // stockColor[name] = 0;
- // renderColores();
- // renderStock();
-//};
+const colorLibre = document.getElementById("colorLibre");
+const btnAgregarColorLibre = document.getElementById("btnAgregarColorLibre");
+
+if (colorLibre) {
+  colorLibre.addEventListener("change", () => {
+
+    const hex = colorLibre.value;
+    const name = hex.toUpperCase();
+
+    if (colores.find(c => c.hex === hex)) return;
+
+    colores.push({ nombre: name, hex });
+    stockColor[name] = 0;
+
+    renderColores();
+    renderStock();
+  });
+}
+
 
 function renderStock() {
   stockDiv.innerHTML = colores.map(c => `
@@ -550,6 +561,7 @@ if (btnGuardar) btnGuardar.onclick = async () => {
       marca: marca.value.trim() || null,
       descripcion: descripcion.value.trim(),
       categoria: categoriaNueva.value || categoria.value,
+       tipo_mascota: tipoMascota.value || null,
       precio: Number(precioBase), 
       es_oferta: es_oferta.checked,
       activo: activo.checked,
@@ -621,6 +633,7 @@ if (btnNuevo) btnNuevo.onclick = () => {
   descripcion.value = "";
   categoria.value = "";
   categoriaNueva.value = "";
+  tipoMascota.value = "";
   es_oferta.checked = false;
   activo.checked = true;
   notas.value = "";
@@ -746,6 +759,7 @@ window.editarProducto = async (id) => {
     marca,
     descripcion,
     categoria,
+    tipo_mascota,
     precio,
     es_oferta,
     activo,
@@ -773,18 +787,18 @@ window.editarProducto = async (id) => {
   marca.value = producto.marca || "";
   descripcion.value = producto.descripcion || "";
   categoria.value = producto.categoria || "";
+  tipoMascota.value = producto.tipo_mascota || "";
   categoriaNueva.value = "";
   es_oferta.checked = producto.es_oferta;
   activo.checked = producto.activo;
   notas.value = producto.notas || "";
 
   // ================= COLORES (AQUÍ VA) =================
-    colores = (producto.colores || []).map(hex => {
-      return {
-        nombre: hex, // ya no usamos nombre real
-        hex: hex
-      };
-    });
+    colores = (producto.colores || []).map(hex => ({
+      nombre: hex,
+      hex
+    }));
+   
 
   stockColor = {};
   renderColores();
@@ -846,7 +860,8 @@ function renderTabla() {
     (p.codigo || "").toLowerCase().includes(texto) ||
     (p.nombre || "").toLowerCase().includes(texto) ||
     (p.marca || "").toLowerCase().includes(texto) ||
-    (p.categoria || "").toLowerCase().includes(texto)
+    (p.categoria || "").toLowerCase().includes(texto) ||
+    (p.tipo_mascota || "").toLowerCase().includes(texto)
   );
 
   filtrados.sort((a, b) => {
