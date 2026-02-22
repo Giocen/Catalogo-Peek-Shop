@@ -1,6 +1,8 @@
 import { supabase } from "./supabase.js";
 import { abrirCarrito, agregarAlCarrito } from "./carrito.js";
 
+const MODO_ADMIN = localStorage.getItem("modo_admin") === "1";
+
 /* =========================================================
    🔑 EXPONER FUNCIONES
 ========================================================= */
@@ -17,12 +19,17 @@ const ZONAS = ["superior", "lateral-izq", "lateral-der"];
 ========================================================= */
 async function cargarZona(zona) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("catalogo_banners")
       .select("*")
       .eq("zona", zona)
-      .eq("activo", true)
       .order("orden", { ascending: true });
+
+    if (!MODO_ADMIN) {
+      query = query.eq("activo", true);
+    }
+
+const { data, error } = await query;
 
     if (error) throw error;
 
@@ -37,112 +44,120 @@ async function cargarZona(zona) {
     /* =========================================================
       RENDER ICONOS (SOLO ZONA SUPERIOR)
     ========================================================= */
-      if (zona === "superior") {
+    if (zona === "superior") {
 
             const params = new URLSearchParams(window.location.search);
             const catActiva = params.get("cat");
             const mascotaActiva = params.get("mascota");
 
             cont.innerHTML = `
-              <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="max-w-7xl mx-auto px-4 py-6 relative">
 
-                <div id="carruselCategorias"
-                    class="flex gap-6 overflow-x-auto scroll-smooth cursor-grab active:cursor-grabbing">
+              <!-- Flecha izquierda -->
+              <button id="btnPrev"
+                class="absolute left-0 top-1/2 -translate-y-1/2 z-20
+                      bg-white shadow-lg rounded-full p-2
+                      hover:scale-110 transition hidden md:flex">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+              </button>
 
-                  ${data.map(b => {
+              <div id="carruselCategorias"
+                  class="flex gap-6 overflow-x-auto scroll-smooth carrusel-peek">
 
-                    const activo =
-                      (catActiva && b.link?.includes(`cat=${catActiva}`)) ||
-                      (mascotaActiva && b.link?.includes(`mascota=${mascotaActiva}`));
+                ${data.map(b => {
+                  const esAdmin = MODO_ADMIN;
 
-                    return `
-                      <div class="min-w-[160px] group">
+                  return `
+                    <div class="relative min-w-[180px] flex-shrink-0 group">
 
-                        <div onclick="location.href='${b.link || "#"}'"
-                            class="
-                              cursor-pointer
-                              rounded-2xl
-                              overflow-hidden
-                              bg-white
-                              shadow-sm
-                              transition-all duration-300
-                              hover:shadow-xl
-                              hover:-translate-y-1
-                              ${activo ? "ring-2 ring-yellow-400" : ""}
-                            ">
+                      ${esAdmin ? `
+                        <div class="absolute top-2 right-2 z-10 flex gap-1">
+                          <button onclick="toggleActivo('${b.id}', ${b.activo})"
+                            class="bg-white shadow px-2 py-1 rounded text-xs">
+                            ${b.activo ? "🟢" : "⚫"}
+                          </button>
 
-                          <div class="aspect-square overflow-hidden bg-gray-100">
+                          <button onclick="editarBanner('${b.id}')"
+                            class="bg-white shadow px-2 py-1 rounded text-xs">
+                            ✏
+                          </button>
 
-                            <img src="${b.url}"
-                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                          <button onclick="eliminarBanner('${b.id}')"
+                            class="bg-red-500 text-white shadow px-2 py-1 rounded text-xs">
+                            🗑
+                          </button>
+                        </div>
+                      ` : ""}
 
-                          </div>
+                      <div draggable="${esAdmin}"
+                        data-id="${b.id}"
+                        class="categoria-card cursor-pointer
+                        ${!b.activo ? 'opacity-40 grayscale' : ''}
+                        transition-all duration-500
+                        hover:-translate-y-2
+                        hover:shadow-2xl"
+                        onclick="${!esAdmin && b.link ? `if(!event.defaultPrevented) location.href='${b.link}'` : ""}">
 
-                          <div class="p-3 text-center">
+                        <img src="${b.url}"
+                            class="w-full h-44 object-cover rounded-2xl">
 
-                            <span class="
-                              text-sm font-semibold
-                              ${activo ? "text-yellow-600" : "text-gray-800"}
-                            ">
-                              ${b.texto || ""}
-                            </span>
-
-                          </div>
-
+                        <div class="text-center mt-2 font-medium">
+                          ${b.texto || ""}
                         </div>
 
                       </div>
-                    `;
-                  }).join("")}
 
-                </div>
-
-                <!-- Indicador de scroll -->
-                <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-                  <div id="scrollIndicator"
-                      class="h-full bg-yellow-500 transition-all duration-300"
-                      style="width: 0%"></div>
-                </div>
+                    </div>
+                  `;
+                }).join("")}
 
               </div>
+
+              <!-- Flecha derecha -->
+              <button id="btnNext"
+                class="absolute right-0 top-1/2 -translate-y-1/2 z-20
+                      bg-white shadow-lg rounded-full p-2
+                      hover:scale-110 transition hidden md:flex">
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+              </button>
+
+            </div>
             `;
 
-            /* ===============================
-              FUNCIONALIDAD SCROLL + DRAG
-            ================================ */
+            if (MODO_ADMIN) {
+              activarDragOrden();
+            }
+            
+            setTimeout(() => {
 
             const carrusel = document.getElementById("carruselCategorias");
-            const indicator = document.getElementById("scrollIndicator");
+            const prev = document.getElementById("btnPrev");
+            const next = document.getElementById("btnNext");
 
-            let isDown = false;
-            let startX;
-            let scrollLeft;
+            if (!carrusel) return;
 
-            carrusel.addEventListener("mousedown", e => {
-              isDown = true;
-              startX = e.pageX - carrusel.offsetLeft;
-              scrollLeft = carrusel.scrollLeft;
+            const scrollAmount = 300;
+
+            prev?.addEventListener("click", () => {
+              carrusel.scrollBy({ left: -scrollAmount, behavior: "smooth" });
             });
 
-            carrusel.addEventListener("mouseleave", () => isDown = false);
-            carrusel.addEventListener("mouseup", () => isDown = false);
-
-            carrusel.addEventListener("mousemove", e => {
-              if (!isDown) return;
-              e.preventDefault();
-              const x = e.pageX - carrusel.offsetLeft;
-              const walk = (x - startX) * 1.5;
-              carrusel.scrollLeft = scrollLeft - walk;
+            next?.addEventListener("click", () => {
+              carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
             });
 
-            carrusel.addEventListener("scroll", () => {
-              const maxScroll = carrusel.scrollWidth - carrusel.clientWidth;
-              const porcentaje = maxScroll > 0
-                ? (carrusel.scrollLeft / maxScroll) * 100
-                : 0;
-              indicator.style.width = porcentaje + "%";
+            lucide.createIcons();
+
+          }, 50);
+
+            const carrusel = document.getElementById("carruselCategorias");
+            if (!carrusel) return;
+
+            carrusel.addEventListener("dragstart", e => {
+              if (!MODO_ADMIN) e.preventDefault();
             });
 
+          
           } else {
 
             /* =====================================================
@@ -160,7 +175,7 @@ async function cargarZona(zona) {
                     b.tipo === "video"
                       ? `<video src="${b.url}" autoplay muted loop
                           class="w-full h-full object-cover"></video>`
-                      : `<img src="${b.url}"
+                      : `<img src="${b.url || '/img/placeholder.png'}"
                           class="w-full h-full object-cover">`
                   }
                 </div>
@@ -357,7 +372,8 @@ async function cargarCatalogo() {
    const params = new URLSearchParams(location.search);
     const cat = params.get("cat");
     const mascota = params.get("mascota");
-    const marca = params.get("marca"); 
+    const marcaParam = params.get("marca");
+    const marca = marcaParam ? marcaParam.split(",") : null;
 
     renderCategorias(productosCache);
 
@@ -366,17 +382,23 @@ async function cargarCatalogo() {
     aplicarFiltrosGlobales();
     actualizarBreadcrumbMarca(marca);
   }
-else if (cat && mascota) {
 
-  aplicarFiltro(cat, mascota);
-
-}
-else {
-
-  renderProductos(productosCache);
-  actualizarBreadcrumb(null, null);
-
-}
+  else if (cat && mascota) {
+      aplicarFiltro(cat, mascota);
+    }
+    else if (cat) {
+      filtrarPorCategoria(cat);
+    }
+    else if (mascota) {
+      filtrosActivos.categoria = null;
+      filtrosActivos.mascota = mascota;
+      aplicarFiltrosGlobales();
+      actualizarBreadcrumb(null, mascota);
+    }
+    else {
+      renderProductos(productosCache);
+      actualizarBreadcrumb(null, null);
+    }
 
 
 
@@ -711,15 +733,24 @@ function actualizarBreadcrumb(cat, mascota) {
   const el = document.getElementById("breadcrumbCategoria");
   if (!el) return;
 
-  // Si no hay filtros
-  if (!cat && !mascota) {
-    el.innerHTML = `
-      <span class="font-semibold text-yellow-600 text-sm">
-        Todos
-      </span>
-    `;
-    return;
-  }
+ if (!cat && !mascota) {
+  el.innerHTML = `<span class="font-semibold text-yellow-600 text-sm">Todos</span>`;
+  return;
+}
+
+if (!cat && mascota) {
+  el.innerHTML = `
+    <button onclick="mostrarTodos()"
+      class="text-gray-600 hover:text-yellow-600 hover:underline text-sm">
+      Todos
+    </button>
+    <span class="mx-1 text-gray-400">›</span>
+    <span class="font-semibold text-yellow-600 text-sm">
+      ${mascota}
+    </span>
+  `;
+  return;
+}
 
   el.innerHTML = `
     <button
@@ -963,12 +994,325 @@ document.getElementById("soloOfertas")?.addEventListener("change", e => {
   filtrosActivos.soloOfertas = e.target.checked;
   aplicarFiltrosGlobales();
 });
+
+
+window.eliminarBanner = async (id) => {
+
+  if (!confirm("¿Eliminar categoría?")) return;
+
+  await supabase
+    .from("catalogo_banners")
+    .delete()
+    .eq("id", id);
+
+  initZonas();
+};
+
+window.editarBanner = async (id) => {
+
+  const { data } = await supabase
+    .from("catalogo_banners")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  let nuevaImagen = null;
+
+  await Swal.fire({
+    title: "Editar categoría",
+    width: 500,
+    html: `
+      <div class="space-y-4 text-left">
+
+        <div>
+          <label class="text-sm font-semibold">Imagen actual</label>
+          <img src="${data.url}"
+               class="w-full h-40 object-cover rounded-xl mt-2">
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold">Cambiar imagen</label>
+          <input id="fileEdit"
+                 type="file"
+                 accept="image/*"
+                 class="swal2-file">
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold">Texto</label>
+          <input id="textoEdit"
+                 class="swal2-input"
+                 value="${data.texto || ""}">
+        </div>
+
+        <div>
+          <label class="text-sm font-semibold">Link</label>
+          <input id="linkEdit"
+                 class="swal2-input"
+                 value="${data.link || ""}">
+        </div>
+
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "Guardar",
+    didOpen: () => {
+
+      const input = document.getElementById("fileEdit");
+
+      input.addEventListener("change", e => {
+        if (e.target.files.length) {
+          nuevaImagen = e.target.files[0];
+        }
+      });
+
+    },
+    preConfirm: async () => {
+
+      let urlFinal = data.url;
+
+      /* 🔥 SI CAMBIÓ IMAGEN */
+      if (nuevaImagen) {
+
+        const path = `banners/${Date.now()}_${nuevaImagen.name}`;
+
+        const imagenOptimizada = await optimizarImagen(nuevaImagen);
+
+        const { error: uploadError } = await supabase.storage
+          .from("catalogo")
+          .upload(path, imagenOptimizada, { upsert: true });
+
+        if (uploadError) {
+          Swal.showValidationMessage("Error subiendo imagen");
+          return false;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("catalogo")
+          .getPublicUrl(path);
+
+        urlFinal = publicUrlData.publicUrl;
+      }
+
+      /* 🔥 ACTUALIZAR TABLA */
+      const { error } = await supabase
+        .from("catalogo_banners")
+        .update({
+          texto: document.getElementById("textoEdit").value,
+          link: document.getElementById("linkEdit").value,
+          url: urlFinal
+        })
+        .eq("id", id);
+
+      if (error) {
+        Swal.showValidationMessage("Error actualizando");
+        return false;
+      }
+
+      initZonas();
+      return true;
+    }
+  });
+};
+
+      function activarDragOrden() {
+
+        const cont = document.querySelector("#carruselCategorias");
+        if (!cont) return;
+
+        let dragged = null;
+
+        cont.querySelectorAll(".categoria-card").forEach(card => {
+
+          const wrapper = card.closest(".relative");
+
+          card.addEventListener("dragstart", e => {
+            e.dataTransfer.effectAllowed = "move";
+            dragged = wrapper;
+            wrapper.classList.add("opacity-50");
+          });
+
+          card.addEventListener("dragend", () => {
+            wrapper.classList.remove("opacity-50");
+            actualizarOrden();
+          });
+
+          wrapper.addEventListener("dragover", e => {
+            e.preventDefault();
+          });
+
+          wrapper.addEventListener("drop", e => {
+            e.preventDefault();
+
+            if (!dragged || dragged === wrapper) return;
+
+            cont.insertBefore(dragged, wrapper);
+          });
+
+        });
+      }
+
+
+async function actualizarOrden() {
+
+  const cont = document.getElementById("carruselCategorias");
+  const cards = cont.querySelectorAll(".categoria-card");
+
+  for (let i = 0; i < cards.length; i++) {
+
+    const id = cards[i].dataset.id;
+
+    await supabase
+      .from("catalogo_banners")
+      .update({ orden: i })
+      .eq("id", id);
+  }
+}
+
+async function optimizarImagen(file) {
+
+  return new Promise(resolve => {
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      img.src = e.target.result;
+    };
+
+    img.onload = () => {
+
+      const canvas = document.createElement("canvas");
+      const size = 600; // cuadrado premium
+
+      canvas.width = size;
+      canvas.height = size;
+
+      const ctx = canvas.getContext("2d");
+
+      // recorte centrado
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+
+      canvas.toBlob(blob => {
+        resolve(blob);
+      }, "image/webp", 0.85);
+
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+window.crearNuevaCategoria = async () => {
+
+  let imagenNueva = null;
+
+  await Swal.fire({
+    title: "Nueva categoría",
+    width: 500,
+    html: `
+      <div class="space-y-4 text-left">
+
+        <input id="fileNueva"
+               type="file"
+               accept="image/*"
+               class="swal2-file">
+
+        <input id="textoNueva"
+               class="swal2-input"
+               placeholder="Texto">
+
+        <input id="linkNueva"
+               class="swal2-input"
+               placeholder="/?cat=Alimentos">
+
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "Crear",
+    didOpen: () => {
+      document.getElementById("fileNueva")
+        .addEventListener("change", e => {
+          if (e.target.files.length) {
+            imagenNueva = e.target.files[0];
+          }
+        });
+    },
+    preConfirm: async () => {
+
+      if (!imagenNueva) {
+        Swal.showValidationMessage("Debes subir imagen");
+        return false;
+      }
+
+      const path = `banners/${Date.now()}_${imagenNueva.name}`;
+
+      const imagenOptimizada = await optimizarImagen(imagenNueva);
+
+      const { error: uploadError } = await supabase.storage
+        .from("catalogo")
+        .upload(path, imagenOptimizada, { upsert: true });
+
+      if (uploadError) {
+        Swal.showValidationMessage("Error subiendo imagen");
+        return false;
+      }
+    
+      const { data: publicUrlData } =
+        supabase.storage.from("catalogo")
+        .getPublicUrl(path);
+
+      const { error } = await supabase
+        .from("catalogo_banners")
+        .insert({
+          zona: "superior",
+          tipo: "imagen",
+          url: publicUrlData.publicUrl,
+          texto: document.getElementById("textoNueva").value,
+          link: document.getElementById("linkNueva").value,
+          orden: Date.now(),
+          activo: true
+        });
+
+      if (error) {
+        Swal.showValidationMessage("Error guardando");
+        return false;
+      }
+
+      initZonas();
+      return true;
+    }
+  });
+};
+
+window.toggleActivo = async (id, estadoActual) => {
+
+  await supabase
+    .from("catalogo_banners")
+    .update({ activo: !estadoActual })
+    .eq("id", id);
+
+  initZonas();
+};
+
+
 /* =========================================================
    INIT
 ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
+
+  console.log("MODO_ADMIN:", MODO_ADMIN);
+
+  if (MODO_ADMIN) {
+    document.getElementById("btnNuevaCategoria")
+      ?.classList.remove("hidden");
+  }
+
   initZonas();
   cargarCatalogo();
+
 });
-
-

@@ -236,3 +236,56 @@ nav a {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Ocultar scrollbar */
+.carrusel-peek::-webkit-scrollbar {
+  display: none;
+}
+.carrusel-peek {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ===================== */
+/* CARRUSEL PREMIUM PRO  */
+/* ===================== */
+
+.carrusel-peek {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.categoria-card {
+  scroll-snap-align: start;
+}
+
+/* Ocultar scrollbar */
+.carrusel-peek::-webkit-scrollbar {
+  display: none;
+}
+.carrusel-peek {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Fade lateral elegante */
+.carrusel-wrapper::before,
+.carrusel-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 60px;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.carrusel-wrapper::before {
+  left: 0;
+  background: linear-gradient(to right, #f9fafb, transparent);
+}
+
+.carrusel-wrapper::after {
+  right: 0;
+  background: linear-gradient(to left, #f9fafb, transparent);
+}
