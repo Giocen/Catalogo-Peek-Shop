@@ -18,7 +18,7 @@ const ZONAS = ["superior", "lateral-izq", "lateral-der"];
 async function cargarZona(zona) {
   try {
     const { data, error } = await supabase
-      .from("catalogo_bloques")
+      .from("catalogo_banners")
       .select("*")
       .eq("zona", zona)
       .eq("activo", true)
@@ -34,39 +34,155 @@ async function cargarZona(zona) {
       return;
     }
 
-    cont.innerHTML = data
-      .map(b => `
-        <div
-          class="rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition"
-          style="grid-column: span ${b.columnas || 4};
-                 height:${b.alto || 180}px"
-        >
-          ${
-            b.tipo === "video"
-              ? `<video src="${b.url}" autoplay muted loop
-                   class="w-full h-full object-cover"></video>`
-              : `<img src="${b.url}"
-                   class="w-full h-full object-cover">`
-          }
-        </div>
-      `)
-      .join("");
+    /* =========================================================
+      RENDER ICONOS (SOLO ZONA SUPERIOR)
+    ========================================================= */
+      if (zona === "superior") {
 
-  } catch (err) {
-    console.error("Error cargando zona:", zona, err);
-  }
-}
+            const params = new URLSearchParams(window.location.search);
+            const catActiva = params.get("cat");
+            const mascotaActiva = params.get("mascota");
+
+            cont.innerHTML = `
+              <div class="max-w-7xl mx-auto px-4 py-6">
+
+                <div id="carruselCategorias"
+                    class="flex gap-6 overflow-x-auto scroll-smooth cursor-grab active:cursor-grabbing">
+
+                  ${data.map(b => {
+
+                    const activo =
+                      (catActiva && b.link?.includes(`cat=${catActiva}`)) ||
+                      (mascotaActiva && b.link?.includes(`mascota=${mascotaActiva}`));
+
+                    return `
+                      <div class="min-w-[160px] group">
+
+                        <div onclick="location.href='${b.link || "#"}'"
+                            class="
+                              cursor-pointer
+                              rounded-2xl
+                              overflow-hidden
+                              bg-white
+                              shadow-sm
+                              transition-all duration-300
+                              hover:shadow-xl
+                              hover:-translate-y-1
+                              ${activo ? "ring-2 ring-yellow-400" : ""}
+                            ">
+
+                          <div class="aspect-square overflow-hidden bg-gray-100">
+
+                            <img src="${b.url}"
+                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+
+                          </div>
+
+                          <div class="p-3 text-center">
+
+                            <span class="
+                              text-sm font-semibold
+                              ${activo ? "text-yellow-600" : "text-gray-800"}
+                            ">
+                              ${b.texto || ""}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+                    `;
+                  }).join("")}
+
+                </div>
+
+                <!-- Indicador de scroll -->
+                <div class="mt-4 h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <div id="scrollIndicator"
+                      class="h-full bg-yellow-500 transition-all duration-300"
+                      style="width: 0%"></div>
+                </div>
+
+              </div>
+            `;
+
+            /* ===============================
+              FUNCIONALIDAD SCROLL + DRAG
+            ================================ */
+
+            const carrusel = document.getElementById("carruselCategorias");
+            const indicator = document.getElementById("scrollIndicator");
+
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            carrusel.addEventListener("mousedown", e => {
+              isDown = true;
+              startX = e.pageX - carrusel.offsetLeft;
+              scrollLeft = carrusel.scrollLeft;
+            });
+
+            carrusel.addEventListener("mouseleave", () => isDown = false);
+            carrusel.addEventListener("mouseup", () => isDown = false);
+
+            carrusel.addEventListener("mousemove", e => {
+              if (!isDown) return;
+              e.preventDefault();
+              const x = e.pageX - carrusel.offsetLeft;
+              const walk = (x - startX) * 1.5;
+              carrusel.scrollLeft = scrollLeft - walk;
+            });
+
+            carrusel.addEventListener("scroll", () => {
+              const maxScroll = carrusel.scrollWidth - carrusel.clientWidth;
+              const porcentaje = maxScroll > 0
+                ? (carrusel.scrollLeft / maxScroll) * 100
+                : 0;
+              indicator.style.width = porcentaje + "%";
+            });
+
+          } else {
+
+            /* =====================================================
+              ZONAS NORMALES (IMAGEN / VIDEO)
+            ====================================================== */
+
+            cont.innerHTML = data
+              .map(b => `
+                <div
+                  class="rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition"
+                  style="grid-column: span ${b.columnas || 4};
+                        height:${b.alto || 180}px"
+                >
+                  ${
+                    b.tipo === "video"
+                      ? `<video src="${b.url}" autoplay muted loop
+                          class="w-full h-full object-cover"></video>`
+                      : `<img src="${b.url}"
+                          class="w-full h-full object-cover">`
+                  }
+                </div>
+              `)
+              .join("");
+          }
+
+      } catch (err) {
+        console.error("Error cargando zona:", zona, err);
+      }
+    }
 
 /* =========================================================
    INICIALIZAR ZONAS
 ========================================================= */
-function initZonas() {
-  ZONAS.forEach(zona => cargarZona(zona));
-}
+  function initZonas() {
+    ZONAS.forEach(zona => cargarZona(zona));
+  }
 
-document.addEventListener("zona-actualizada", e => {
-  cargarZona(e.detail);
-});
+  document.addEventListener("zona-actualizada", e => {
+    cargarZona(e.detail);
+  });
 
 /* =========================================================
    CATÁLOGO DE PRODUCTOS
@@ -80,7 +196,7 @@ let productosCache = [];
 let filtrosActivos = {
   categoria: null,
   mascota: null,
-  marca: null,
+  marca: [],
   precioMin: null,
   precioMax: null,
   soloOfertas: false,
@@ -99,9 +215,9 @@ function aplicarFiltrosGlobales() {
         p.tipo_mascota !== filtrosActivos.mascota)
       return false;
 
-    if (filtrosActivos.marca &&
-        p.marca !== filtrosActivos.marca)
-      return false;
+    if (filtrosActivos.marca.length > 0 &&
+          !filtrosActivos.marca.includes(p.marca))
+        return false;
 
     if (filtrosActivos.soloOfertas &&
         !p.es_oferta)
@@ -122,18 +238,71 @@ function aplicarFiltrosGlobales() {
     Number(p.precio) < filtrosActivos.precioMin)
       return false;
 
-    if (filtrosActivos.precioMax &&
+    if (filtrosActivos.precioMax !== null &&
         Number(p.precio) > filtrosActivos.precioMax)
       return false;
 
     return true;
   });
 
+  const url = new URL(window.location);
+
+    Object.entries(filtrosActivos).forEach(([key, value]) => {
+
+      if (
+      value === null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0) ||
+      value === false
+    ) {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(
+        key,
+        Array.isArray(value) ? value.join(",") : value
+      );
+    }
+
+});
+
+window.history.replaceState({}, "", url);
+
   renderProductos(resultado);
   actualizarContador(resultado.length);
+  renderChips();
 }
 
 
+function renderChips() {
+
+  const cont = document.getElementById("chipsFiltros");
+  if (!cont) return;
+
+  cont.innerHTML = "";
+
+  Object.entries(filtrosActivos).forEach(([key, value]) => {
+
+    if (!value || key === "busqueda") return;
+
+    const chip = document.createElement("div");
+
+    chip.className =
+      "bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full flex items-center gap-1";
+
+    chip.innerHTML = `
+      ${value}
+      <span class="cursor-pointer font-bold">✕</span>
+    `;
+
+    chip.onclick = () => {
+      filtrosActivos[key] = null;
+      aplicarFiltrosGlobales();
+    };
+
+    cont.appendChild(chip);
+
+  });
+}
 /* ---------------------------------------------------------
    CARGAR CATÁLOGO
 --------------------------------------------------------- */
@@ -177,7 +346,8 @@ async function cargarCatalogo() {
           en_oferta
         )
       `)
-      .eq("activo", true);
+      .eq("activo", true)
+      .limit(200);      
 
 
     if (error) throw error;
@@ -523,7 +693,7 @@ window.mostrarTodos = () => {
   filtrosActivos = {
     categoria: null,
     mascota: null,
-    marca: null,
+    marca: [],
     precioMin: null,
     precioMax: null,
     soloOfertas: false,
@@ -533,6 +703,7 @@ window.mostrarTodos = () => {
   renderProductos(productosCache);
   actualizarBreadcrumb(null, null);
   actualizarContador(productosCache.length);
+  renderFiltroMarcas(productosCache);
 };
 
 function actualizarBreadcrumb(cat, mascota) {
@@ -722,8 +893,8 @@ function actualizarBreadcrumbMarca(marca) {
               p.tipo_mascota !== filtrosActivos.mascota)
             return false;
 
-          if (filtrosActivos.marca &&
-              p.marca !== filtrosActivos.marca)
+          if (filtrosActivos.marca.length > 0 &&
+              !filtrosActivos.marca.includes(p.marca))
             return false;
 
           if (filtrosActivos.busqueda) {
@@ -749,7 +920,49 @@ function actualizarBreadcrumbMarca(marca) {
         }
 
         renderProductos(resultado);
+        
       });
+
+      function renderFiltroMarcas(productos) {
+
+  const cont = document.getElementById("filtroMarcas");
+  if (!cont) return;
+
+  const marcas = [...new Set(productos.map(p => p.marca).filter(Boolean))];
+
+  cont.innerHTML = `
+    <h4 class="font-semibold mb-2 text-sm">Marcas</h4>
+    ${marcas.map(m => `
+      <label class="flex items-center gap-2 text-sm mb-1">
+        <input type="checkbox" value="${m}" class="marca-checkbox">
+        ${m}
+      </label>
+    `).join("")}
+  `;
+
+  document.querySelectorAll(".marca-checkbox").forEach(cb => {
+
+    cb.addEventListener("change", e => {
+
+      const marca = e.target.value;
+
+      if (e.target.checked) {
+        filtrosActivos.marca.push(marca);
+      } else {
+        filtrosActivos.marca =
+          filtrosActivos.marca.filter(m => m !== marca);
+      }
+
+      aplicarFiltrosGlobales();
+    });
+
+  });
+}
+
+document.getElementById("soloOfertas")?.addEventListener("change", e => {
+  filtrosActivos.soloOfertas = e.target.checked;
+  aplicarFiltrosGlobales();
+});
 /* =========================================================
    INIT
 ========================================================= */

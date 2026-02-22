@@ -26,7 +26,6 @@ if (MODO_ADMIN) {
 /* =========================================================
    ESTADO
 ========================================================= */
-let mediaActual = null;
 let zonaActual = null;
 
 /* =========================================================
@@ -38,46 +37,47 @@ ZONAS.forEach(zona => {
 });
 
 /* =========================================================
-   MODAL EDITOR
+   MODAL EDITOR (ICONOS)
 ========================================================= */
 function abrirEditor(zona) {
+
   zonaActual = zona;
-  mediaActual = null;
 
   Swal.fire({
     title: `Editar zona: ${zona}`,
     width: 600,
     html: `
-      <div class="space-y-3 text-left">
+      <div class="space-y-4 text-left">
 
-        <label class="block text-sm font-semibold">Columnas</label>
-        <select id="cols" class="swal2-input">
-          <option value="1">1 / 4</option>
-          <option value="2">2 / 4</option>
-          <option value="3">3 / 4</option>
-          <option value="4" selected>4 / 4</option>
+        <label class="block text-sm font-semibold">
+          Seleccionar icono
+        </label>
+
+        <select id="icono" class="swal2-input">
+          <option value="shopping-bag">Shopping Bag</option>
+          <option value="bone">Bone</option>
+          <option value="cat">Cat</option>
+          <option value="dog">Dog</option>
+          <option value="fish">Fish</option>
+          <option value="heart">Heart</option>
+          <option value="gift">Gift</option>
+          <option value="sparkles">Sparkles</option>
+          <option value="truck">Truck</option>
         </select>
 
-        <label class="block text-sm font-semibold">Alto (px)</label>
-        <input id="alto" type="number" class="swal2-input" value="200">
-
-        <div
-          id="drop"
-          class="border-2 border-dashed rounded p-4
-                 text-center cursor-pointer bg-slate-50">
-          📋 Pega una imagen (Ctrl + V)
-        </div>
-
-        <label class="block text-sm font-semibold mt-2">
-          O subir archivo (imagen o video)
+        <label class="block text-sm font-semibold">
+          Texto
         </label>
-        <input
-          id="fileMedia"
-          type="file"
-          accept="image/*,video/*"
-          class="swal2-file">
+        <input id="texto"
+               class="swal2-input"
+               placeholder="Ej: Alimentos">
 
-        <div id="preview" class="mt-3"></div>
+        <label class="block text-sm font-semibold">
+          Link
+        </label>
+        <input id="link"
+               class="swal2-input"
+               placeholder="/?cat=Alimentos">
 
       </div>
     `,
@@ -87,123 +87,41 @@ function abrirEditor(zona) {
     preConfirm: guardarBloque
   });
 
-  activarPegado();
-  activarFileInput();
 }
 
 /* =========================================================
-   PEGAR IMAGEN (Ctrl + V)
-========================================================= */
-function activarPegado() {
-  document.addEventListener(
-    "paste",
-    e => {
-      for (const item of e.clipboardData.items) {
-        if (item.type.startsWith("image")) {
-          mediaActual = item.getAsFile();
-          renderPreview();
-        }
-      }
-    },
-    { once: true }
-  );
-}
-
-/* =========================================================
-   INPUT FILE (imagen / video)
-========================================================= */
-function activarFileInput() {
-  const input = document.getElementById("fileMedia");
-  if (!input) return;
-
-  input.onchange = e => {
-    if (e.target.files.length) {
-      mediaActual = e.target.files[0];
-      renderPreview();
-    }
-  };
-}
-
-/* =========================================================
-   PREVIEW
-========================================================= */
-function renderPreview() {
-  const cont = document.getElementById("preview");
-  if (!cont || !mediaActual) return;
-
-  const url = URL.createObjectURL(mediaActual);
-
-  cont.innerHTML = mediaActual.type.startsWith("video")
-    ? `
-      <video
-        src="${url}"
-        autoplay
-        muted
-        loop
-        class="rounded w-full h-40 object-cover">
-      </video>`
-    : `
-      <img
-        src="${url}"
-        class="rounded w-full h-40 object-cover">`;
-}
-
-/* =========================================================
-   GUARDAR BLOQUE (USA catalogo_banners)
+   GUARDAR BLOQUE (ICONOS)
 ========================================================= */
 async function guardarBloque() {
-  if (!zonaActual || !mediaActual) {
-    Swal.showValidationMessage("Debes pegar o subir una imagen o video");
+
+  const icono = document.getElementById("icono").value;
+  const texto = document.getElementById("texto").value;
+  const link = document.getElementById("link").value;
+
+  if (!icono || !texto) {
+    Swal.showValidationMessage("Debes completar icono y texto");
     return false;
   }
 
-  const columnas = +document.getElementById("cols").value;
-  const alto = +document.getElementById("alto").value;
-
-  const tipo = mediaActual.type.startsWith("video")
-    ? "video"
-    : "imagen";
-
   try {
-    /* -----------------------------------------------------
-       BORRAR BLOQUES ANTERIORES DE LA ZONA
-    ----------------------------------------------------- */
-    await supabase
-      .from("catalogo_banners")
-      .delete()
-      .eq("zona", zonaActual);
 
     /* -----------------------------------------------------
-       SUBIR ARCHIVO A STORAGE
+       INSERTAR NUEVO BLOQUE (NO BORRA LOS ANTERIORES)
+       Permite múltiples iconos en la zona
     ----------------------------------------------------- */
-    const path = `banners/${zonaActual}/${Date.now()}_${mediaActual.name}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("catalogo")
-      .upload(path, mediaActual, { upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage
-      .from("catalogo")
-      .getPublicUrl(path);
-
-    /* -----------------------------------------------------
-       INSERTAR EN TABLA catalogo_banners
-    ----------------------------------------------------- */
-    const { error: insertError } = await supabase
+    const { error } = await supabase
       .from("catalogo_banners")
       .insert({
         zona: zonaActual,
-        tipo,
-        url: data.publicUrl,
-        columnas,
-        alto,
+        tipo: "icono",
+        icono,
+        texto,
+        link,
         orden: Date.now(),
         activo: true
       });
 
-    if (insertError) throw insertError;
+    if (error) throw error;
 
     /* -----------------------------------------------------
        NOTIFICAR AL HOME
