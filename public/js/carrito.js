@@ -82,9 +82,11 @@ export function abrirCarrito() {
 
     return;
   }
-
   renderPortal();
+  
 }
+
+ window.abrirCarrito = abrirCarrito;
 
 /* ================= AGREGAR ================= */
   export function agregarAlCarrito(producto) {
@@ -121,15 +123,18 @@ function renderPortal() {
   const carrito = getCarrito();
   const portal = document.getElementById("cart-portal");
 
-      if (!portal) return;
-
+      if (!portal) {
+        console.error("cart-portal no existe en el DOM");
+        return;
+      }
+  document.body.style.overflow = "hidden";
   const subtotal = carrito.reduce((a, p) =>
     a + Number(p.precio) * Number(p.cantidad), 0);
 
   const faltan = ENVIO_GRATIS_DESDE - subtotal;
   const zona = localStorage.getItem("zona_envio") || "Caucel";
 
-  const metaGratis = 400;
+  const metaGratis = ENVIO_GRATIS_DESDE;
 
   const progreso =
     zona === "Caucel"
@@ -154,213 +159,105 @@ function renderPortal() {
         : "none";
 
   portal.innerHTML = `
-  <div id="cartOverlay"
-    onclick="window._cerrarSiOverlay(event)"
-    style="
-      position:fixed;
-      inset:0;
-      backdrop-filter:blur(6px);
-      background:rgba(0,0,0,.35);
-      z-index:999999;
-      display:flex;
-      justify-content:flex-end;
-    ">
+<div class="cart-overlay">
+  
+  <div class="cart-panel">
 
-    <div onclick="event.stopPropagation()"
-      style="
-        background:#ffffff;
-        width:100%;
-        max-width:100%;
-        height:100%;
-        display:flex;
-        flex-direction:column;
-        box-shadow:-10px 0 40px rgba(0,0,0,.15);
-        animation:slideCart .25s ease-out;
-      ">
-
-      <!-- HEADER -->
-      <div style="
-        padding:18px;
-        border-bottom:1px solid #f1f5f9;
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-      ">
-        <div>
-          <div style="font-weight:800;font-size:18px;color:#0f172a">
-            🛒 Tu carrito
-          </div>
-          <div style="font-size:12px;color:#64748b">
-            ${carrito.length} productos
-          </div>
+    <!-- HEADER -->
+    <div class="cart-header">
+      <div>
+        <div class="cart-title">
+          <i data-lucide="shopping-cart"></i>
+          Tu carrito
         </div>
-
-        <button onclick="window._cerrarCarrito()"
-          style="
-            width:34px;height:34px;
-            border-radius:50%;
-            border:none;
-            background:#f1f5f9;
-            cursor:pointer;
-            font-size:16px;
-          ">
-          ✕
-        </button>
-        </div>
-
-      <!-- 🔥 BADGE ENVÍO -->
-      ${
-          zona === "Caucel"
-            ? (
-                subtotal >= 400
-                  ? `
-                    <div style="
-                      margin:14px 18px 0;
-                      padding:10px;
-                      border-radius:12px;
-                      background:#dcfce7;
-                      color:#166534;
-                      font-weight:600;
-                      text-align:center;
-                      animation:bounceBadge .5s ease;
-                    ">
-                      🚚 ¡Envío GRATIS desbloqueado!
-                    </div>
-                  `
-                  : `
-                    <div style="margin:14px 18px 0">
-                      <div style="font-size:12px;color:#475569;margin-bottom:6px">
-                        Te faltan <strong>$${faltan > 0 ? faltan : 0}</strong>
-                        para envío gratis
-                      </div>
-                      <div style="
-                        height:8px;
-                        background:#e2e8f0;
-                        border-radius:20px;
-                        overflow:hidden;
-                      ">
-                        <div style="
-                          height:100%;
-                          width:${progreso}%;
-                          background:${colorBarra};
-                          box-shadow:${glowBarra};
-                          transition:width .4s ease, background .4s ease;
-                        "></div>
-                      </div>
-                    </div>
-                  `
-              )
-            : `
-              <div style="
-                margin:14px 18px 0;
-                padding:12px;
-                border-radius:12px;
-                background:#fff7ed;
-                color:#ea580c;
-                font-weight:500;
-                font-size:13px;
-              ">
-                📲 El envío en Mérida se cotiza por WhatsApp
-              </div>
-            `
-        }
-
-      <!-- ENTREGA -->
-      <div style="padding:14px 18px 6px">
-        <div style="
-          display:flex;
-          background:#f8fafc;
-          border-radius:14px;
-          padding:4px;
-        ">
-          <button
-            onclick="window._setEntrega('envio')"
-            style="
-              flex:1;padding:8px;border:none;
-              border-radius:10px;font-weight:600;
-              background:${tipoEntrega === "envio" ? "#16a34a" : "transparent"};
-              color:${tipoEntrega === "envio" ? "white" : "#334155"};
-              transition:.2s;
-            ">
-            🚚 Envío
-          </button>
-
-          <button
-            onclick="window._setEntrega('tienda')"
-            style="
-              flex:1;padding:8px;border:none;
-              border-radius:10px;font-weight:600;
-              background:${tipoEntrega === "tienda" ? "#16a34a" : "transparent"};
-              color:${tipoEntrega === "tienda" ? "white" : "#334155"};
-              transition:.2s;
-            ">
-            🏪 Recoger
-          </button>
+        <div class="cart-subtitle">
+          ${carrito.length} productos
         </div>
       </div>
 
-      <div id="cartBody"
-        style="flex:1;overflow:auto;padding:0 18px 10px;"></div>
-
-      <!-- FOOTER -->
-      <div style="
-        padding:16px 18px;
-        border-top:1px solid #f1f5f9;
-        box-shadow:0 -8px 20px rgba(0,0,0,.04);
-      ">
-        <div id="cartTotal" style="margin-bottom:12px;font-size:14px"></div>
-
-        <button id="btnEnviar"
-          style="
-            width:100%;
-            padding:12px;
-            border:none;
-            border-radius:14px;
-            font-weight:700;
-            font-size:15px;
-            color:white;
-            cursor:pointer;
-            background:${
-              zona === "Caucel"
-                ? "linear-gradient(135deg,#22c55e,#16a34a)"
-                : "linear-gradient(135deg,#f97316,#ea580c)"
-            };
-            box-shadow:0 6px 18px rgba(0,0,0,.15);
-            transition:.2s;
-          "
-          onmouseover="this.style.transform='scale(1.03)'"
-          onmouseout="this.style.transform='scale(1)'"
-        >
-          ${
-            zona === "Caucel"
-              ? "Finalizar pedido"
-              : "📲 Cotizar envío por WhatsApp"
-          }
-        </button>
-      </div>
+      <button class="cart-close" onclick="window._cerrarCarrito()">
+        <i data-lucide="x"></i>
+      </button>
     </div>
+
+    <!-- BADGE ENVÍO -->
+    ${
+      zona === "Caucel"
+        ? (
+            subtotal >= 400
+              ? `
+                <div class="shipping-success">
+                  🚚 ¡Envío GRATIS desbloqueado!
+                </div>
+              `
+              : `
+                <div class="shipping-progress">
+                  <div class="shipping-text">
+                    Te faltan <strong>$${faltan > 0 ? faltan : 0}</strong>
+                    para envío gratis
+                  </div>
+                  <div class="progress-bar">
+                    <div class="progress-fill"
+                      style="
+                        width:${progreso}%;
+                        background:${colorBarra};
+                        box-shadow:${glowBarra};
+                      ">
+                    </div>
+                  </div>
+                </div>
+              `
+          )
+        : `
+          <div class="shipping-warning">
+            📲 El envío en Mérida se cotiza por WhatsApp
+          </div>
+        `
+    }
+
+    <!-- ENTREGA -->
+    <div class="delivery-toggle">
+
+      <div class="delivery-indicator"
+        style="left:${tipoEntrega === "envio" ? "4px" : "calc(50% + 2px)"}">
+      </div>
+
+      <button
+        class="delivery-btn ${tipoEntrega === "envio" ? "active" : ""}"
+        onclick="window._setEntrega('envio')">
+        <i data-lucide="truck"></i>
+        Envío
+      </button>
+
+      <button
+        class="delivery-btn ${tipoEntrega === "tienda" ? "active" : ""}"
+        onclick="window._setEntrega('tienda')">
+        <i data-lucide="store"></i>
+        Recoger
+      </button>
+
+    </div>
+
+    <!-- BODY -->
+    <div id="cartBody" class="cart-body"></div>
+
+    <!-- FOOTER -->
+    <div class="cart-footer">
+      <div id="cartTotal" class="cart-total"></div>
+
+      <button id="btnEnviar" class="checkout-btn">
+        ${
+          zona === "Caucel"
+            ? "Finalizar pedido"
+            : "Cotizar envío por WhatsApp"
+        }
+      </button>
+    </div>
+
   </div>
 
- <style>
-  @keyframes slideCart {
-    from { transform:translateX(100%); }
-    to { transform:translateX(0); }
-  }
-
-  @keyframes bounceBadge {
-    0% { transform:scale(.8); }
-    50% { transform:scale(1.05); }
-    100% { transform:scale(1); }
-  }
-
-  @keyframes fallConfetti {
-    to {
-      transform: translateY(100vh) rotate(720deg);
-      opacity: 0;
-    }
-  }
-</style>
-  `;
+</div>
+`;
 
   const btn = document.getElementById("btnEnviar");
 
@@ -376,6 +273,7 @@ function renderPortal() {
   }
   renderItems();
   animarContador(Math.floor(progreso));
+  if (window.lucide) lucide.createIcons();
 }
 
 /* ================= ITEMS + TOTAL ================= */
@@ -384,154 +282,144 @@ function renderItems() {
   const carrito = getCarrito();
 
   const body = document.getElementById("cartBody");
-
   const totalEl = document.getElementById("cartTotal");
+
+  if (!body || !totalEl) return;
 
   let subtotal = 0;
 
+  // ================= RENDER ITEMS =================
+  if (!carrito.length) {
+
+    body.innerHTML = `
+      <div style="padding:20px;text-align:center;color:#64748b">
+        Tu carrito está vacío
+      </div>
+    `;
+
+    totalEl.innerHTML = "";
+    return;
+  }
+
   body.innerHTML = carrito.map(p => {
+
     const precio = Number(p.precio) || 0;
     const cantidad = Number(p.cantidad) || 0;
-    const t = precio * cantidad;
-    subtotal += t;
+    const totalItem = precio * cantidad;
+
+    subtotal += totalItem;
 
     return `
-      <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #eee">
-        <img src="${p.imagen}" style="width:56px;height:56px;object-fit:contain">
+      <div class="cart-item">
 
-        <div style="flex:1">
-          <div style="font-weight:600">${p.nombre}</div>
-          <div style="color:#16a34a;font-weight:700">$${precio}</div>
+        <img src="${p.imagen || ''}" class="cart-item-img">
 
-          <div style="
-            margin-top:8px;
-            display:flex;
-            align-items:center;
-            gap:12px;
-          ">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${p.nombre}</div>
+          <div class="cart-item-price">$${precio}</div>
+
+          <div class="cart-qty">
 
             <button 
-              onclick="_cartMinus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})"
-
-              style="
-                width:36px;
-                height:36px;
-                border-radius:10px;
-                border:none;
-                background:#f1f5f9;
-                font-size:18px;
-                font-weight:bold;
-              ">
-              −
+              class="qty-btn qty-minus"
+              onclick="event.stopPropagation();_cartMinus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})">
+              <i data-lucide="minus"></i>
             </button>
 
-            <div style="
-              min-width:28px;
-              text-align:center;
-              font-weight:700;
-              font-size:16px;
-            ">
+            <div class="qty-number">
               ${cantidad}
             </div>
 
             <button 
-              onclick="_cartPlus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})"
-              style="
-                width:36px;
-                height:36px;
-                border-radius:10px;
-                border:none;
-                background:#16a34a;
-                color:white;
-                font-size:18px;
-                font-weight:bold;
-              ">
-              +
+              class="qty-btn qty-plus"
+              onclick="event.stopPropagation(); _cartPlus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})">
+              <i data-lucide="plus"></i>
             </button>
 
+          </div>
         </div>
 
-        <div style="text-align:right">
-          <div style="font-weight:700">$${t}</div>
-          <button
-            onclick="_cartDel('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})"
+        <div class="cart-item-right">
+          <div class="cart-item-total">$${totalItem}</div>
 
-            style="
-              color:#dc2626;
-              font-size:12px;
-              background:none;
-              border:none;
-              cursor:pointer;
-              padding:0;
-            ">
-            Eliminar
+          <button
+            class="qty-btn qty-delete"
+            onclick="event.stopPropagation();_cartDel('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})">
+            <i data-lucide="trash-2"></i>
           </button>
         </div>
-      </div>
+
       </div>
     `;
+
   }).join("");
 
+  // ================= CALCULAR ENVÍO =================
   const zona = localStorage.getItem("zona_envio") || "Caucel";
 
-    let envio = 0;
+  let envio = 0;
 
-    if (tipoEntrega === "tienda") {
-      envio = 0;
-    }
-    else if (zona === "Caucel") {
-      envio = subtotal >= 400 ? 0 : 25;
-    }
-    else {
-      // Mérida → envío no calculado automáticamente
-      envio = 0;
-    }
+  if (tipoEntrega === "tienda") {
+    envio = 0;
+  }
+  else if (zona === "Caucel") {
+    envio = subtotal >= 400 ? 0 : 25;
+  }
+  else {
+    envio = 0; // Mérida → se cotiza manual
+  }
 
   const totalFinal = subtotal + envio;
 
+  // ================= RENDER TOTAL =================
   totalEl.innerHTML = `
-    <div style="display:flex;justify-content:space-between">
-      <span>Subtotal</span><span>$${subtotal}</span>
+    <div class="cart-summary-row">
+      <span>Subtotal</span>
+      <span>$${subtotal}</span>
     </div>
-    <div style="display:flex;justify-content:space-between">
+
+    <div class="cart-summary-row">
       <span>Envío</span>
       <span>
-      ${
-        tipoEntrega === "tienda"
-          ? "Gratis"
-          : zona === "Caucel"
-            ? (envio === 0 ? "Gratis" : `$${envio}`)
-            : "Cotizar por WhatsApp"
-      }
+        ${
+          tipoEntrega === "tienda"
+            ? "Gratis"
+            : zona === "Caucel"
+              ? (envio === 0 ? "Gratis" : `$${envio}`)
+              : "Cotizar por WhatsApp"
+        }
       </span>
     </div>
-    <div style="display:flex;justify-content:space-between;
-                font-weight:800;font-size:18px;margin-top:6px">
-      <span>Total</span><span>$${totalFinal}</span>
+
+    <div class="cart-summary-total">
+      <span>Total</span>
+      <span>$${totalFinal}</span>
     </div>
   `;
+
+  // Volver a pintar iconos
+  if (window.lucide) lucide.createIcons();
 }
-
 /* ================= ACCIONES ================= */
-  window._cartPlus = (id, presId, color) => {
+ window._cartPlus = (id, presId, color) => {
 
-    let carrito = getCarrito();
+  let carrito = getCarrito();
 
-    const p = carrito.find(i =>
-      i.id === id &&
-      i.presentacion_id === (presId || null) &&
-      i.color === (color || null)
-    );
+  const p = carrito.find(i =>
+    i.id === id &&
+    i.presentacion_id === (presId || null) &&
+    i.color === (color || null)
+  );
 
-    if (!p) return;
+  if (!p) return;
 
-    p.cantidad++;
+  p.cantidad++;
 
-    setCarrito(carrito);
-    guardar();
-    renderItems();
+  setCarrito(carrito);
+  guardar();
+  renderItems();
+  actualizarToggleEntrega();
   };
-
 window._cartMinus = (id, presId, color) => {
 
       let carrito = getCarrito();
@@ -553,6 +441,7 @@ window._cartMinus = (id, presId, color) => {
       setCarrito(carrito);
       guardar();
       renderItems();
+      actualizarToggleEntrega();
     };
 
 window._cartDel = (id, presId, color) => {
@@ -570,20 +459,22 @@ window._cartDel = (id, presId, color) => {
   setCarrito(carrito);
   guardar();
   renderItems();
-};
+  actualizarToggleEntrega();
+  };
 
 
-window._setEntrega = tipo => {
+ window._setEntrega = tipo => {
   tipoEntrega = tipo;
-  renderPortal();
+  actualizarToggleEntrega();
+  renderItems();
 };
 
-window._cerrarSiOverlay = e => {
-  if (e.target.id === "cartOverlay") {
-    const portal = document.getElementById("cart-portal");
-    if (portal) portal.innerHTML = "";
-  }
+window._cerrarCarrito = () => {
+  const portal = document.getElementById("cart-portal");
+  if (portal) portal.innerHTML = "";
+  document.body.style.overflow = "";
 };
+
 
 /* ================= DATOS CLIENTE ================= */
  function pedirDatosCliente(esCompraDirecta = false) {
@@ -602,49 +493,43 @@ window._cerrarSiOverlay = e => {
       popup: "animate__animated animate__bounceIn"
     },
     html: `
-        <div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">
+                <div class="swal-form">
 
-          <div style="
-            background:#dcfce7;
-            padding:12px;
-            border-radius:14px;
-            font-size:12.5px;
-            color:#166534;
-            line-height:1.5;
-            display:flex;
-            gap:8px;
-            align-items:flex-start;
-          ">
-            <div style="font-size:16px">🔒</div>
-            <div>
-              <strong>Información protegida</strong><br>
-              Tus datos se utilizan únicamente como referencia
-              para la entrega y confirmación del pedido.
-              No compartimos tu información con terceros.
-            </div>
-          </div>
+                  <div class="swal-info-box">
+                    <div class="swal-info-icon">🔒</div>
+                    <div>
+                      <strong>Información protegida</strong><br>
+                      Tus datos se utilizan únicamente como referencia
+                      para la entrega y confirmación del pedido.
+                      No compartimos tu información con terceros.
+                    </div>
+                  </div>
 
-          <input id="swal-nombre"
-            class="swal2-input"
-            placeholder="Nombre completo"
-            style="border-radius:14px">
+                  <input 
+                    id="swal-nombre"
+                    class="swal2-input swal-custom-input"
+                    placeholder="Nombre completo">
 
-          ${
-            tipoEntrega === "envio"
-              ? `<textarea id="swal-direccion"
-                  class="swal2-textarea"
-                  placeholder="Dirección completa"
-                  style="border-radius:14px"></textarea>`
-              : ""
-          }
+                  ${
+                    tipoEntrega === "envio"
+                      ? `
+                      <textarea
+                        id="swal-direccion"
+                        class="swal2-textarea swal-custom-input"
+                        placeholder="Dirección completa">
+                      </textarea>
+                      `
+                      : ""
+                  }
 
-          <textarea id="swal-referencia"
-            class="swal2-textarea"
-            placeholder="Referencia (opcional)"
-            style="border-radius:14px"></textarea>
+                  <textarea
+                    id="swal-referencia"
+                    class="swal2-textarea swal-custom-input"
+                    placeholder="Referencia (opcional)">
+                  </textarea>
 
-        </div>
-      `,
+                </div>
+              `,
     preConfirm: () => {
       const nombre = document.getElementById("swal-nombre").value.trim();
       const direccion =
@@ -769,15 +654,32 @@ function guardar() {
 
 
 
-function toast(t) {
-  const d = document.createElement("div");
-  d.textContent = t;
-  d.style.cssText =
-    "position:fixed;bottom:80px;right:20px;background:#16a34a;color:white;" +
-    "padding:10px 14px;border-radius:8px;z-index:9999999";
-  document.body.appendChild(d);
-  setTimeout(() => d.remove(), 1200);
-}
+      function toast(t) {
+        const d = document.createElement("div");
+
+        d.innerHTML = `
+          <div style="
+            display:flex;
+            align-items:center;
+            gap:8px;
+          ">
+            <i data-lucide="check-circle" style="width:16px;height:16px"></i>
+            ${t}
+          </div>
+        `;
+
+        d.style.cssText =
+          "position:fixed;bottom:80px;right:20px;background:#16a34a;color:white;" +
+          "padding:12px 16px;border-radius:12px;z-index:9999999;" +
+          "box-shadow:0 10px 25px rgba(0,0,0,.15);" +
+          "animation:fadeIn .2s ease;";
+
+        document.body.appendChild(d);
+
+        if (window.lucide) lucide.createIcons();
+
+        setTimeout(() => d.remove(), 1200);
+      }
 
 guardar();
 
@@ -940,18 +842,23 @@ guardar();
 
   
   async function guardarPedidoSupabase({ numeroPedido, cliente, totales }) {
-    await supabase.from("pedidos").insert({
-      numero_pedido: numeroPedido,
-      cliente_nombre: cliente.nombre,
-      cliente_direccion: cliente.direccion || "",
-      tipo_entrega: tipoEntrega,
-      subtotal: totales.subtotal,
-      envio: totales.envio,
-      total: totales.total,
-      productos: window._compraTemporal || getCarrito()
-    });
+
+  const { error } = await supabase.from("pedidos").insert({
+    numero_pedido: numeroPedido,
+    cliente_nombre: cliente.nombre,
+    cliente_direccion: cliente.direccion || "",
+    tipo_entrega: tipoEntrega,
+    subtotal: totales.subtotal,
+    envio: totales.envio,
+    total: totales.total,
+    productos: window._compraTemporal || getCarrito()
+  });
+
+  if (error) {
+    console.error("Error guardando pedido:", error);
+    Swal.fire("Error", "No se pudo guardar el pedido", "error");
   }
-  
+}
 
 /* ================= COMPRA DIRECTA ================= */
     window.comprarAhoraDirecto = producto => {
@@ -990,12 +897,6 @@ function animarCarritoIcon() {
     setTimeout(() => desktop.style.animation = "", 400);
   }
 }
-
-window._cerrarCarrito = () => {
-  const portal = document.getElementById("cart-portal");
-  if (portal) portal.innerHTML = "";
-};
-
 
 
 function lanzarConfetti() {
@@ -1092,67 +993,39 @@ function seleccionarTipoEntregaCompraDirecta() {
       popup: "animate__animated animate__fadeInUp"
     },
     html: `
-      <div style="text-align:left">
+            <div class="swal-delivery">
 
-        <h3 style="
-          font-weight:800;
-          font-size:18px;
-          margin-bottom:10px;
-          text-align:center;
-        ">
-          ¿Cómo deseas recibir tu pedido?
-        </h3>
+              <h3 class="swal-delivery-title">
+                ¿Cómo deseas recibir tu pedido?
+              </h3>
 
-        <!-- Producto -->
-        <div style="
-          background:#f8fafc;
-          padding:10px;
-          border-radius:12px;
-          margin-bottom:14px;
-          font-size:14px;
-        ">
-          <strong>${producto.nombre}</strong><br>
-          Subtotal: <strong>$${subtotal}</strong>
-        </div>
+              <!-- Producto -->
+              <div class="swal-product-box">
+                <strong>${producto.nombre}</strong><br>
+                Subtotal: <strong>$${subtotal}</strong>
+              </div>
 
-        <!-- Toggle -->
-        <div style="
-          display:flex;
-          background:#f1f5f9;
-          border-radius:16px;
-          padding:6px;
-          gap:6px;
-          margin-bottom:14px;
-        ">
+              <!-- Toggle -->
+              <div class="swal-toggle">
 
-          <button id="optEnvio"
-            style="flex:1;padding:12px;border:none;border-radius:12px;font-weight:700;cursor:pointer;">
-            🚚 Envío
-          </button>
+                <div id="swalToggleIndicator" class="swal-toggle-indicator"></div>
 
-          <button id="optTienda"
-            style="flex:1;padding:12px;border:none;border-radius:12px;font-weight:700;cursor:pointer;">
-            🏪 Recoger
-          </button>
+                <button id="optEnvio" class="swal-toggle-btn">
+                  🚚 Envío
+                </button>
 
-        </div>
+                <button id="optTienda" class="swal-toggle-btn">
+                  🏪 Recoger
+                </button>
 
-        <!-- Costo estimado -->
-        <div id="costoEstimado"
-          style="
-            background:linear-gradient(135deg,#dcfce7,#bbf7d0);
-            padding:14px;
-            border-radius:18px;
-            font-size:14px;
-            font-weight:700;
-            text-align:center;
-            box-shadow:0 6px 20px rgba(0,0,0,.08);
-            transition:.3s;
-          ">
-        </div>
+              </div>
 
-      </div>
-    `,
+              <!-- Costo estimado -->
+              <div id="costoEstimado" class="swal-cost-box"></div>
+
+            </div>
+          `,
+    
     didOpen: () => {
 
       const btnEnvio = document.getElementById("optEnvio");
@@ -1243,3 +1116,24 @@ function seleccionarTipoEntregaCompraDirecta() {
   });
 }
 
+function actualizarToggleEntrega() {
+  const toggle = document.querySelector(".delivery-toggle");
+  if (!toggle) return;
+
+  const envioBtn = toggle.querySelector("[onclick*=\"envio\"]");
+  const tiendaBtn = toggle.querySelector("[onclick*=\"tienda\"]");
+  const indicator = toggle.querySelector(".delivery-indicator");
+
+  if (!envioBtn || !tiendaBtn || !indicator) return;
+
+  envioBtn.classList.remove("active");
+  tiendaBtn.classList.remove("active");
+
+  if (tipoEntrega === "envio") {
+    envioBtn.classList.add("active");
+    indicator.style.left = "4px";
+  } else {
+    tiendaBtn.classList.add("active");
+    indicator.style.left = "calc(50% + 2px)";
+  }
+}

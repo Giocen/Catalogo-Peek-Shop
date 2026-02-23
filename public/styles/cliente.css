@@ -1,168 +1,165 @@
-/* ==============================
-   CARD PRODUCTO
-============================== */
+/* ==================================================
+   CARD PRODUCTO PREMIUM AISLADA
+   Scope: SOLO .card-producto
+================================================== */
+
 .card-producto {
-  background: white;
-  border-radius: 14px;
+  background: #fff;
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 1px 6px rgba(0,0,0,.08);
   display: flex;
   flex-direction: column;
+  position: relative;
+  transition: transform .35s cubic-bezier(.22,.61,.36,1),
+              box-shadow .35s ease;
+  box-shadow:
+    0 2px 6px rgba(0,0,0,.04),
+    0 8px 24px rgba(0,0,0,.06);
+  will-change: transform;
 }
 
-/* Imagen */
-.img-producto {
+/* ================== HOVER ================== */
+
+.card-producto:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,.08),
+    0 22px 44px rgba(0,0,0,.12);
+}
+
+/* ================== IMAGEN ================== */
+
+.card-producto img {
+  transition: transform .5s ease;
+}
+
+.card-producto:hover img {
+  transform: scale(1.05);
+}
+
+.card-producto__img {
   width: 100%;
-  height: 140px;
+  height: 130px;
   object-fit: cover;
 }
 
-/* Texto */
-.nombre {
-  font-size: .85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ================== CONTENIDO ================== */
+
+.card-producto__body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.precio {
-  font-size: 1.1rem;
-  font-weight: bold;
+/* ================== TEXTO ================== */
+
+.card-producto__nombre {
+  font-size: .85rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  /* Estándar moderno */
+  line-clamp: 2;
+}
+
+.card-producto__precio {
+  font-size: 1rem;
+  font-weight: 600;
   color: #16a34a;
 }
 
-.precio-anterior {
+.card-producto__precio-anterior {
   font-size: .75rem;
   color: #9ca3af;
   text-decoration: line-through;
 }
 
-/* Oferta */
-.badge-oferta {
+/* ================== BADGE ================== */
+
+.card-producto__badge {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 10px;
+  left: 10px;
   background: #dc2626;
   color: white;
-  font-size: .7rem;
-  padding: 2px 6px;
+  font-size: 11px;
+  padding: 4px 8px;
   border-radius: 999px;
+  z-index: 20;
 }
 
-/* Variantes */
-.variantes {
+/* Diagonal */
+.card-producto__badge-diagonal {
+  position: absolute;
+  top: 16px;
+  left: -42px;
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 60px;
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  z-index: 30;
+}
+
+/* ================== VARIANTES ================== */
+
+.card-producto__variantes {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin: 6px 0;
 }
 
-.variante {
-  border: 1px solid #d1d5db;
-  font-size: .7rem;
-  padding: 2px 6px;
+.card-producto__variante {
+  border: 1px solid #e5e7eb;
+  font-size: 11px;
+  padding: 2px 8px;
   border-radius: 999px;
 }
 
-.variante.agotado {
+.card-producto__variante--agotado {
   opacity: .4;
   cursor: not-allowed;
 }
 
-/* Botón Whats */
-.btn-whats {
+/* ================== BOTÓN ================== */
+
+.card-producto__btn {
   margin-top: auto;
   background: #16a34a;
   color: white;
-  font-size: .85rem;
+  font-size: 13px;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: 12px;
+  font-weight: 500;
+  transition: .2s;
 }
 
-/* Chips */
-.chip {
-  background: #f1f5f9;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-  white-space: nowrap;
+.card-producto__btn:hover {
+  transform: translateY(-2px);
 }
 
-@keyframes fadeInSoft {
-  from { opacity: 0; transform: translateY(8px); }
+/* ================== ANIMACIÓN APARECER ================== */
+
+@keyframes productoFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fadeIn {
-  animation: fadeInSoft .3s ease-out;
+.card-producto--visible {
+  animation: productoFadeUp .4s ease forwards;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+/* ================== SKELETON ================== */
 
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* ================= CHIPS CATEGORÍAS ================= */
-#categorias button{
-  background:white;
-  border-radius:999px;
-  padding:6px 14px;
-  font-size:13px;
-  font-weight:500;
-  box-shadow:0 2px 6px rgba(0,0,0,.06);
-  transition:.2s;
-  white-space:nowrap;
-}
-#categorias button.activo{
-  background:#facc15;
-  font-weight:600;
-}
-
-/* ================= BOTTOM NAV APP FEEL ================= */
-nav button:active,
-nav a:active{
-  transform:scale(.92);
-}
-
-/* ================= MICRO FEEDBACK PRODUCTO ================= */
-.highlight-add{
-  box-shadow:0 0 0 3px rgba(250,204,21,.7);
-  transition:.3s;
-}
-
-/* ================= HEADER TRANSICIÓN ================= */
-#mainHeader{
-  transition:all .3s ease;
-}
-
-/* ================= APARICIÓN PRODUCTOS ================= */
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.producto-appear {
-  opacity: 0;
-}
-
-.producto-visible {
-  animation: fadeUp .45s ease forwards;
-}
-
-/* ================= SKELETON ================= */
-
-.skeleton {
+.card-producto__skeleton {
   background: linear-gradient(
     90deg,
     #f1f5f9 25%,
@@ -170,122 +167,11 @@ nav a:active{
     #f1f5f9 63%
   );
   background-size: 400% 100%;
-  animation: skeleton-loading 1.2s ease infinite;
+  animation: skeletonLoading 1.2s ease infinite;
   border-radius: 12px;
 }
 
-@keyframes skeleton-loading {
+@keyframes skeletonLoading {
   0% { background-position: 100% 0 }
   100% { background-position: 0 0 }
-}
-
-/* ================= EFECTO HOVER PRO ================= */
-
-.card-producto {
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-
-.card-producto:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0,0,0,.12);
-}
-
-/* ================= BOTTOM NAV PRO ================= */
-
-.bottom-nav-active {
-  color: #facc15;
-}
-
-.bottom-nav-active i {
-  transform: scale(1.15);
-}
-
-nav button,
-nav a {
-  transition: all .2s ease;
-}
-
-@keyframes reboteOferta {
-  0%,100% { transform: rotate(-45deg) scale(1); }
-  50% { transform: rotate(-45deg) scale(1.08); }
-}
-
-.animate-oferta {
-  animation: reboteOferta 1.6s ease-in-out infinite;
-}
-
-.badge-oferta-diagonal {
-  position: absolute;
-  top: 14px;
-  left: -45px;
-  background: #dc2626;
-  color: white;
-  font-size: 11px;
-  font-weight: bold;
-  padding: 4px 55px;
-  text-align: center;
-  transform: rotate(-45deg);
-  box-shadow: 0 4px 12px rgba(0,0,0,.2);
-  z-index: 30;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Ocultar scrollbar */
-.carrusel-peek::-webkit-scrollbar {
-  display: none;
-}
-.carrusel-peek {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* ===================== */
-/* CARRUSEL PREMIUM PRO  */
-/* ===================== */
-
-.carrusel-peek {
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-.categoria-card {
-  scroll-snap-align: start;
-}
-
-/* Ocultar scrollbar */
-.carrusel-peek::-webkit-scrollbar {
-  display: none;
-}
-.carrusel-peek {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Fade lateral elegante */
-.carrusel-wrapper::before,
-.carrusel-wrapper::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 60px;
-  height: 100%;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.carrusel-wrapper::before {
-  left: 0;
-  background: linear-gradient(to right, #f9fafb, transparent);
-}
-
-.carrusel-wrapper::after {
-  right: 0;
-  background: linear-gradient(to left, #f9fafb, transparent);
 }

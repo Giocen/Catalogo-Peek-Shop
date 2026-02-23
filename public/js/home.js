@@ -49,106 +49,133 @@ const { data, error } = await query;
             const params = new URLSearchParams(window.location.search);
             const catActiva = params.get("cat");
             const mascotaActiva = params.get("mascota");
+                cont.innerHTML = `
+                <div class="max-w-7xl mx-auto px-4 py-6 relative carrusel-wrapper">
 
-            cont.innerHTML = `
-            <div class="max-w-7xl mx-auto px-4 py-6 relative">
+                  <!-- Flecha izquierda -->
+                  <button id="btnPrev"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 z-20
+                          bg-white shadow-xl rounded-full p-2
+                          hover:scale-110 transition flex">
+                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                  </button>
 
-              <!-- Flecha izquierda -->
-              <button id="btnPrev"
-                class="absolute left-0 top-1/2 -translate-y-1/2 z-20
-                      bg-white shadow-lg rounded-full p-2
-                      hover:scale-110 transition hidden md:flex">
-                <i data-lucide="chevron-left" class="w-5 h-5"></i>
-              </button>
+                  <div id="carruselCategorias"
+                      class="flex gap-6 overflow-x-auto scroll-smooth carrusel-peek">
 
-              <div id="carruselCategorias"
-                  class="flex gap-6 overflow-x-auto scroll-smooth carrusel-peek">
+                    ${data.map(b => {
+                      const esAdmin = MODO_ADMIN;
 
-                ${data.map(b => {
-                  const esAdmin = MODO_ADMIN;
+                      return `
+                        <div class="relative min-w-[200px] flex-shrink-0 group">
 
-                  return `
-                    <div class="relative min-w-[180px] flex-shrink-0 group">
+                          ${esAdmin ? `                           
+                              <div class="absolute top-2 right-2 z-30 flex flex-col gap-1">
 
-                      ${esAdmin ? `
-                        <div class="absolute top-2 right-2 z-10 flex gap-1">
-                          <button onclick="toggleActivo('${b.id}', ${b.activo})"
-                            class="bg-white shadow px-2 py-1 rounded text-xs">
-                            ${b.activo ? "🟢" : "⚫"}
-                          </button>
+                                <!-- Activar / Desactivar -->
+                                <button onclick="toggleActivo('${b.id}', ${b.activo})"
+                                  class="bg-white/90 backdrop-blur px-2 py-1 rounded text-xs shadow hover:scale-105 transition">
+                                  ${b.activo ? "🟢 Activo" : "⚫ Inactivo"}
+                                </button>
 
-                          <button onclick="editarBanner('${b.id}')"
-                            class="bg-white shadow px-2 py-1 rounded text-xs">
-                            ✏
-                          </button>
+                                <!-- Editar -->
+                                <button onclick="editarBanner('${b.id}')"
+                                  class="bg-blue-500 text-white px-2 py-1 rounded text-xs shadow hover:bg-blue-600 transition">
+                                  ✏️ Editar
+                                </button>
 
-                          <button onclick="eliminarBanner('${b.id}')"
-                            class="bg-red-500 text-white shadow px-2 py-1 rounded text-xs">
-                            🗑
-                          </button>
+                                <!-- Eliminar -->
+                                <button onclick="eliminarBanner('${b.id}')"
+                                  class="bg-red-500 text-white px-2 py-1 rounded text-xs shadow hover:bg-red-600 transition">
+                                  🗑 Eliminar
+                                </button>
+
+                              </div>
+                            ` : ""}
+
+                            <div draggable="${esAdmin}"
+                                data-id="${b.id}"
+                                class="categoria-card cursor-pointer
+                                transition-all duration-500
+                                hover:-translate-y-2 hover:shadow-2xl"
+                                ${!esAdmin ? `data-link="${generarLinkCategoria(b.texto)}"` : ""}
+                            >
+
+                            <img src="${b.url}"
+                                class="w-full h-48 object-cover rounded-2xl">
+
+                            <div class="text-center mt-2 font-medium">
+                              ${b.texto || ""}
+                            </div>
+
+                          </div>
+
                         </div>
-                      ` : ""}
+                      `;
+                    }).join("")}
 
-                      <div draggable="${esAdmin}"
-                        data-id="${b.id}"
-                        class="categoria-card cursor-pointer
-                        ${!b.activo ? 'opacity-40 grayscale' : ''}
-                        transition-all duration-500
-                        hover:-translate-y-2
-                        hover:shadow-2xl"
-                        onclick="${!esAdmin && b.link ? `if(!event.defaultPrevented) location.href='${b.link}'` : ""}">
+                  </div>
 
-                        <img src="${b.url}"
-                            class="w-full h-44 object-cover rounded-2xl">
+                  <!-- Flecha derecha -->
+                  <button id="btnNext"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 z-20
+                          bg-white shadow-xl rounded-full p-2
+                          hover:scale-110 transition flex">
+                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                  </button>
 
-                        <div class="text-center mt-2 font-medium">
-                          ${b.texto || ""}
-                        </div>
-
-                      </div>
-
-                    </div>
-                  `;
-                }).join("")}
-
-              </div>
-
-              <!-- Flecha derecha -->
-              <button id="btnNext"
-                class="absolute right-0 top-1/2 -translate-y-1/2 z-20
-                      bg-white shadow-lg rounded-full p-2
-                      hover:scale-110 transition hidden md:flex">
-                <i data-lucide="chevron-right" class="w-5 h-5"></i>
-              </button>
-
-            </div>
-            `;
+                </div>
+                `;
 
             if (MODO_ADMIN) {
               activarDragOrden();
             }
-            
             setTimeout(() => {
 
-            const carrusel = document.getElementById("carruselCategorias");
-            const prev = document.getElementById("btnPrev");
-            const next = document.getElementById("btnNext");
+              const carrusel = document.getElementById("carruselCategorias");
+              const prev = document.getElementById("btnPrev");
+              const next = document.getElementById("btnNext");
 
-            if (!carrusel) return;
+              if (!carrusel) return;
 
-            const scrollAmount = 300;
+              const scrollAmount = 240;
 
-            prev?.addEventListener("click", () => {
-              carrusel.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-            });
+              prev?.addEventListener("click", () => {
+                carrusel.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+              });
 
-            next?.addEventListener("click", () => {
-              carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
-            });
+              next?.addEventListener("click", () => {
+                carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
+              });
 
-            lucide.createIcons();
+              // 🔥 AUTO SCROLL INFINITO
+              function scrollCarrusel() {
+                if (carrusel.scrollLeft + carrusel.clientWidth >= carrusel.scrollWidth - 5) {
+                  carrusel.scrollTo({ left: 0, behavior: "smooth" });
+                } else {
+                  carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
+                }
+              }
 
-          }, 50);
+              let autoScroll = setInterval(scrollCarrusel, 4000);
+
+              // Pausar cuando el usuario interactúa
+              carrusel.addEventListener("mouseenter", () => {
+                clearInterval(autoScroll);
+              });
+
+              carrusel.addEventListener("mouseleave", () => {
+                clearInterval(autoScroll);
+                autoScroll = setInterval(scrollCarrusel, 4000);
+              });
+
+              carrusel.addEventListener("touchstart", () => {
+                clearInterval(autoScroll);
+              });
+
+              lucide.createIcons();
+
+            }, 100);
 
             const carrusel = document.getElementById("carruselCategorias");
             if (!carrusel) return;
@@ -164,24 +191,38 @@ const { data, error } = await query;
               ZONAS NORMALES (IMAGEN / VIDEO)
             ====================================================== */
 
-            cont.innerHTML = data
-              .map(b => `
-                <div
-                  class="rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition"
-                  style="grid-column: span ${b.columnas || 4};
-                        height:${b.alto || 180}px"
-                >
-                  ${
-                    b.tipo === "video"
-                      ? `<video src="${b.url}" autoplay muted loop
-                          class="w-full h-full object-cover"></video>`
-                      : `<img src="${b.url || '/img/placeholder.png'}"
-                          class="w-full h-full object-cover">`
-                  }
-                </div>
-              `)
-              .join("");
-          }
+           cont.innerHTML = data
+        .map(b => `
+          <div
+            class="rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition"
+            style="grid-column: span ${b.columnas || 4};
+                  height:${b.alto || 180}px"
+          >
+            ${
+              b.tipo === "video"
+                ? `
+                  <video
+                    src="${b.url || ''}"
+                    autoplay
+                    muted
+                    loop
+                    playsinline
+                    class="w-full h-full object-cover"
+                  ></video>
+                `
+                : `
+                  <img
+                    src="${b.url || '/img/placeholder.png'}"
+                    loading="lazy"
+                    decoding="async"
+                    class="w-full h-full object-cover"
+                  />
+                `
+            }
+          </div>
+        `)
+        .join("");
+        }
 
       } catch (err) {
         console.error("Error cargando zona:", zona, err);
@@ -204,6 +245,32 @@ const { data, error } = await query;
 ========================================================= */
 const contenedor = document.getElementById("productos");
 let productosCache = [];
+
+/* =========================================================
+   🔗 GENERAR LINK AUTOMÁTICO CARRUSEL
+========================================================= */
+function generarLinkCategoria(texto) {
+
+  if (!texto || !productosCache.length) return "#";
+
+  const existeCategoria = productosCache.some(
+    p => p.categoria?.toLowerCase() === texto.toLowerCase()
+  );
+
+  const existeMascota = productosCache.some(
+    p => p.tipo_mascota?.toLowerCase() === texto.toLowerCase()
+  );
+
+  if (existeCategoria) {
+    return `/?cat=${encodeURIComponent(texto)}`;
+  }
+
+  if (existeMascota) {
+    return `/?mascota=${encodeURIComponent(texto)}`;
+  }
+
+  return "#";
+}
 
 /* =========================================================
    🎯 FILTROS GLOBALES
@@ -230,13 +297,22 @@ function aplicarFiltrosGlobales() {
         p.tipo_mascota !== filtrosActivos.mascota)
       return false;
 
-    if (filtrosActivos.marca.length > 0 &&
-          !filtrosActivos.marca.includes(p.marca))
+    if (
+        filtrosActivos.marca.length > 0 &&
+        !filtrosActivos.marca.includes(
+          p.marca?.toLowerCase()
+        )
+      )
         return false;
 
-    if (filtrosActivos.soloOfertas &&
-        !p.es_oferta)
-      return false;
+    if (filtrosActivos.soloOfertas) {
+
+      const tieneOfertaPresentacion =
+        p.catalogo_presentaciones?.some(v => v.en_oferta);
+
+      if (!p.es_oferta && !tieneOfertaPresentacion)
+        return false;
+    }
 
     if (filtrosActivos.busqueda) {
       const texto = `
@@ -285,6 +361,7 @@ window.history.replaceState({}, "", url);
   renderProductos(resultado);
   actualizarContador(resultado.length);
   renderChips();
+  sincronizarChecksMarcas();
 }
 
 
@@ -302,15 +379,19 @@ function renderChips() {
     const chip = document.createElement("div");
 
     chip.className =
-      "bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full flex items-center gap-1";
+  "bg-yellow-50 border border-yellow-300 text-yellow-700 text-xs px-3 py-1 rounded-full flex items-center gap-2 shadow-sm hover:bg-yellow-100 transition cursor-pointer";
 
     chip.innerHTML = `
       ${value}
-      <span class="cursor-pointer font-bold">✕</span>
+      <span class="text-yellow-600 font-bold hover:text-red-500">✕</span>
     `;
 
     chip.onclick = () => {
-      filtrosActivos[key] = null;
+      if (Array.isArray(filtrosActivos[key])) {
+        filtrosActivos[key] = [];
+      } else {
+        filtrosActivos[key] = null;
+      }
       aplicarFiltrosGlobales();
     };
 
@@ -337,33 +418,37 @@ async function cargarCatalogo() {
 
   try {
       const { data, error } = await supabase
-      .from("catalogo_productos")
-      .select(`
-        id,
-        nombre,
-        precio,
-        es_oferta,
-        precio_anterior,
-        categoria,
-        marca,
-        tipo_mascota,
-        catalogo_multimedia (
-          id,
-          url,
-          tipo,
-          orden
-        ),
-        catalogo_presentaciones(
+        .from("catalogo_productos")
+        .select(`
           id,
           nombre,
           precio,
-          precio_oferta,
-          en_oferta
-        )
-      `)
-      .eq("activo", true)
-      .limit(200);      
+          es_oferta,
+          precio_anterior,
+          categoria,
+          marca,
+          tipo_mascota,
+          catalogo_multimedia:catalogo_multimedia!catalogo_multimedia_producto_id_fkey (
+            id,
+            url,
+            tipo,
+            orden
+          ),
+          catalogo_presentaciones(
+            id,
+            nombre,
+            precio,
+            precio_oferta,
+            en_oferta
+          )
+        `)
+        .eq("activo", true)
 
+        // 🔥 ORDEN E-COMMERCE
+        .order("es_oferta", { ascending: false })   
+        .order("categoria", { ascending: true })    
+        .order("nombre", { ascending: true })      
+        .limit(200);
 
     if (error) throw error;
 
@@ -376,9 +461,10 @@ async function cargarCatalogo() {
     const marca = marcaParam ? marcaParam.split(",") : null;
 
     renderCategorias(productosCache);
+    renderFiltroMarcas(productosCache);
 
   if (marca) {
-    filtrosActivos.marca = marca;
+  filtrosActivos.marca = marca.map(m => m.toLowerCase());
     aplicarFiltrosGlobales();
     actualizarBreadcrumbMarca(marca);
   }
@@ -390,10 +476,22 @@ async function cargarCatalogo() {
       filtrarPorCategoria(cat);
     }
     else if (mascota) {
-      filtrosActivos.categoria = null;
-      filtrosActivos.mascota = mascota;
+
+      const existeCategoria = productosCache.some(p => p.categoria === mascota);
+      const existeMascota = productosCache.some(p => p.tipo_mascota === mascota);
+
+      if (existeCategoria) {
+        filtrosActivos.categoria = mascota;
+        filtrosActivos.mascota = null;
+        actualizarBreadcrumb(mascota, null);
+      } 
+      else if (existeMascota) {
+        filtrosActivos.categoria = null;
+        filtrosActivos.mascota = mascota;
+        actualizarBreadcrumb(null, mascota);
+      }
+
       aplicarFiltrosGlobales();
-      actualizarBreadcrumb(null, mascota);
     }
     else {
       renderProductos(productosCache);
@@ -432,21 +530,32 @@ function renderProductos(productos) {
       return;
     }
 
-  contenedor.innerHTML = productos
-    .map(p => {
+        contenedor.innerHTML = productos
+          .map(p => {
 
-      const imagenOrdenada =
-        p.catalogo_multimedia
-          ?.filter(m => m.tipo === "imagen")
-          ?.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+          let multimedia = [];
 
-      const img =
-        imagenOrdenada?.[0]?.url ||
-        "/img/placeholder.png";
+          if (Array.isArray(p.catalogo_multimedia)) {
+            multimedia = p.catalogo_multimedia;
+          }
+          else if (p.catalogo_multimedia && typeof p.catalogo_multimedia === "object") {
+            multimedia = [p.catalogo_multimedia];
+          }
+          else {
+            multimedia = [];
+          }
+
+      const imagenOrdenada = multimedia
+        .filter(m => m.tipo === "imagen")
+        .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+
+      const img = imagenOrdenada.length
+        ? imagenOrdenada[0].url
+        : "/img/placeholder.png";
 
 
-      let precioMin = p.precio;
-      let precioMax = p.precio;
+      let precioMin = Number(p.precio);
+      let precioMax = Number(p.precio);
 
       if (p.catalogo_presentaciones?.length) {
         const precios = p.catalogo_presentaciones.map(v => Number(v.precio));
@@ -484,30 +593,33 @@ function renderProductos(productos) {
             </div>
           ` : ""}
 
-
-
-        <div class="aspect-square bg-white overflow-hidden rounded-t-2xl relative cursor-pointer flex items-center justify-center"
-            onclick="location.href='/producto.html?id=${p.id}'">
+       <div class="aspect-square bg-white overflow-hidden rounded-t-2xl relative cursor-pointer flex items-center justify-center"
+            data-link="/producto.html?id=${p.id}">
 
           <img
             src="${img}"
             loading="lazy"
+            decoding="async"
+            fetchpriority="low"
             class="w-full h-full object-cover bg-white
                   transition-transform duration-300 group-hover:scale-105"
           >
+
         </div>
 
        <div class="p-2 sm:p-3 flex flex-col flex-1">
-        <div class="text-xs sm:text-sm font-medium leading-tight line-clamp-2 cursor-pointer"
-              onclick="location.href='/producto.html?id=${p.id}'">
+        <div 
+            class="text-[14px] sm:text-[15px] font-normal leading-snug text-gray-800 line-clamp-2 tracking-tight cursor-pointer hover:text-blue-600 transition"
+             data-link="/producto.html?id=${p.id}"
+          >
             ${p.nombre}
           </div>
 
-          <div class="text-base sm:text-lg font-bold text-green-700 mt-1">
+          <div class="text-base sm:text-[15px] font-semibold text-green-700 mt-1 tracking-tight">
               ${
                 precioMin !== precioMax
-                  ? `$${precioMin} – $${precioMax}`
-                  : `$${precioMin}`
+                  ? `$${precioMin.toLocaleString("es-MX")} – $${precioMax.toLocaleString("es-MX")}`
+                  : `$${precioMin.toLocaleString("es-MX")}`
               }
             </div>
 
@@ -520,9 +632,13 @@ function renderProductos(productos) {
             }
 
             <button
-              class="btn-agregar mt-auto bg-blue-600 hover:bg-blue-700
-                    text-white text-sm py-2 rounded-xl
-                    transition transform active:scale-95"
+              class="btn-agregar mt-auto
+              bg-gradient-to-r from-blue-600 to-blue-700
+              hover:from-blue-700 hover:to-blue-800
+              text-white text-sm py-2.5 rounded-xl
+              transition-all duration-300
+              shadow-sm hover:shadow-md
+              active:scale-95"
               data-id="${p.id}"
               data-nombre="${p.nombre.replace(/"/g, '&quot;')}"
               data-precio="${precioMin}"
@@ -539,15 +655,8 @@ function renderProductos(productos) {
       </div>
       `;
     })
-    .join("");
-
+    .join("");  
   
-  actualizarContador(productos.length);
-  setTimeout(() => {
-    if (window.activarAnimacionProductos) {
-      activarAnimacionProductos();
-    }
-  }, 50);
 }
 
 function actualizarContador(total) {
@@ -726,6 +835,8 @@ window.mostrarTodos = () => {
   actualizarBreadcrumb(null, null);
   actualizarContador(productosCache.length);
   renderFiltroMarcas(productosCache);
+  
+  
 };
 
 function actualizarBreadcrumb(cat, mascota) {
@@ -861,6 +972,7 @@ window.abrirPanelCategorias = () => {
   const contenido = document.getElementById("panelCategoriasContenido");
 
   panel.classList.remove("hidden");
+  document.body.classList.add("overflow-hidden"); 
 
   setTimeout(() => {
     contenido.classList.remove("-translate-x-full");
@@ -877,9 +989,25 @@ window.cerrarPanelCategorias = () => {
 
   setTimeout(() => {
     panel.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden"); 
   }, 300);
 
 };
+
+// 🔥 Cerrar panel al tocar fuera
+document.getElementById("panelCategoriasMobile")
+  ?.addEventListener("click", e => {
+
+  const contenido = document.getElementById("panelCategoriasContenido");
+
+  if (!contenido) return;
+
+  // Si el click NO fue dentro del panel
+  if (!contenido.contains(e.target)) {
+    cerrarPanelCategorias();
+  }
+
+});
 
 function actualizarBreadcrumbMarca(marca) {
 
@@ -925,15 +1053,19 @@ function actualizarBreadcrumbMarca(marca) {
             return false;
 
           if (filtrosActivos.marca.length > 0 &&
-              !filtrosActivos.marca.includes(p.marca))
-            return false;
+            !filtrosActivos.marca.includes(
+              p.marca?.toLowerCase()
+            ))
+          return false;
 
           if (filtrosActivos.busqueda) {
-            const texto = `
-              ${p.nombre || ""}
-              ${p.marca || ""}
-              ${p.categoria || ""}
-            `.toLowerCase();
+            const texto = (
+              (p.nombre || "") +
+              " " +
+              (p.marca || "") +
+              " " +
+              (p.categoria || "")
+            ).toLowerCase();
 
             if (!texto.includes(filtrosActivos.busqueda))
               return false;
@@ -943,13 +1075,27 @@ function actualizarBreadcrumbMarca(marca) {
         });
 
         if (e.target.value === "precio-asc") {
-          resultado.sort((a, b) => a.precio - b.precio);
+          const getPrecio = p => {
+            if (p.catalogo_presentaciones?.length) {
+              return Math.min(...p.catalogo_presentaciones.map(v => Number(v.precio)));
+            }
+            return Number(p.precio);
+          };
+
+          resultado.sort((a, b) => getPrecio(a) - getPrecio(b));
         }
 
         if (e.target.value === "precio-desc") {
-          resultado.sort((a, b) => b.precio - a.precio);
-        }
 
+            const getPrecio = p => {
+              if (p.catalogo_presentaciones?.length) {
+                return Math.min(...p.catalogo_presentaciones.map(v => Number(v.precio)));
+              }
+              return Number(p.precio);
+            };
+
+            resultado.sort((a, b) => getPrecio(b) - getPrecio(a));
+          }
         renderProductos(resultado);
         
       });
@@ -959,41 +1105,115 @@ function actualizarBreadcrumbMarca(marca) {
   const cont = document.getElementById("filtroMarcas");
   if (!cont) return;
 
-  const marcas = [...new Set(productos.map(p => p.marca).filter(Boolean))];
+  // 🔥 Normalizar nombres (Primera letra mayúscula)
+  const normalizar = str =>
+    str.toLowerCase()
+      .replace(/\b\w/g, l => l.toUpperCase());
+
+  // 🔥 Quitar duplicados ignorando mayúsculas
+  const marcasUnicas = [
+    ...new Map(
+      productos
+        .filter(p => p.marca)
+        .map(p => [p.marca.toLowerCase(), normalizar(p.marca)])
+    ).values()
+  ];
+
+  // 🔥 Ordenar alfabéticamente
+  const marcas = marcasUnicas.sort((a, b) =>
+    a.localeCompare(b, "es", { sensitivity: "base" })
+  );
 
   cont.innerHTML = `
     <h4 class="font-semibold mb-2 text-sm">Marcas</h4>
     ${marcas.map(m => `
-      <label class="flex items-center gap-2 text-sm mb-1">
-        <input type="checkbox" value="${m}" class="marca-checkbox">
+      <label class="flex items-center gap-2 text-sm mb-1 cursor-pointer hover:text-yellow-600 transition">
+        <input 
+          type="checkbox" 
+          value="${m}" 
+          class="marca-checkbox accent-yellow-500"
+          ${filtrosActivos.marca.includes(m.toLowerCase()) ? "checked" : ""}
+        >
         ${m}
       </label>
     `).join("")}
   `;
 
-  document.querySelectorAll(".marca-checkbox").forEach(cb => {
+  // 🔥 Evento change (DESKTOP)
+  cont.querySelectorAll(".marca-checkbox").forEach(cb => {
 
     cb.addEventListener("change", e => {
 
-      const marca = e.target.value;
+      const marca = e.target.value.toLowerCase();
 
       if (e.target.checked) {
-        filtrosActivos.marca.push(marca);
+        if (!filtrosActivos.marca.includes(marca)) {
+          filtrosActivos.marca.push(marca);
+        }
       } else {
         filtrosActivos.marca =
           filtrosActivos.marca.filter(m => m !== marca);
       }
 
       aplicarFiltrosGlobales();
+      sincronizarChecksMarcas();
+
     });
 
   });
+
+  // 🔥 Render móvil después de crear desktop
+  renderFiltroMarcasMobile();
 }
 
-document.getElementById("soloOfertas")?.addEventListener("change", e => {
-  filtrosActivos.soloOfertas = e.target.checked;
-  aplicarFiltrosGlobales();
-});
+function renderFiltroMarcasMobile() {
+
+  const desktop = document.getElementById("filtroMarcas");
+  const mobile = document.getElementById("filtroMarcasMobile");
+
+  if (!desktop || !mobile) return;
+
+  mobile.innerHTML = desktop.innerHTML;
+
+  mobile.querySelectorAll(".marca-checkbox").forEach(cb => {
+
+    cb.addEventListener("change", e => {
+
+      const marca = e.target.value.toLowerCase();
+
+      if (e.target.checked) {
+        if (!filtrosActivos.marca.includes(marca)) {
+          filtrosActivos.marca.push(marca);
+        }
+      } else {
+        filtrosActivos.marca =
+          filtrosActivos.marca.filter(m => m !== marca);
+      }
+
+      aplicarFiltrosGlobales();
+      sincronizarChecksMarcas();
+
+    });
+
+  });
+
+}
+
+function sincronizarChecksMarcas() {
+
+  const todos = document.querySelectorAll(".marca-checkbox");
+
+  todos.forEach(cb => {
+    const marca = cb.value.toLowerCase();
+    cb.checked = filtrosActivos.marca.includes(marca);
+  });
+
+}
+
+      document.getElementById("soloOfertas")?.addEventListener("change", e => {
+        filtrosActivos.soloOfertas = e.target.checked;
+        aplicarFiltrosGlobales();
+      });
 
 
 window.eliminarBanner = async (id) => {
@@ -1146,7 +1366,9 @@ window.editarBanner = async (id) => {
 
             if (!dragged || dragged === wrapper) return;
 
-            cont.insertBefore(dragged, wrapper);
+            if (wrapper.parentNode === cont) {
+              cont.insertBefore(dragged, wrapper);
+            }
           });
 
         });
@@ -1158,15 +1380,14 @@ async function actualizarOrden() {
   const cont = document.getElementById("carruselCategorias");
   const cards = cont.querySelectorAll(".categoria-card");
 
-  for (let i = 0; i < cards.length; i++) {
-
-    const id = cards[i].dataset.id;
-
-    await supabase
-      .from("catalogo_banners")
-      .update({ orden: i })
-      .eq("id", id);
-  }
+    await Promise.all(
+    Array.from(cards).map((card, i) =>
+      supabase
+        .from("catalogo_banners")
+        .update({ orden: i })
+        .eq("id", card.dataset.id)
+    )
+  );
 }
 
 async function optimizarImagen(file) {
@@ -1299,11 +1520,88 @@ window.toggleActivo = async (id, estadoActual) => {
   initZonas();
 };
 
+document.addEventListener("click", e => {
+
+  if (
+    e.target.closest("button") ||
+    e.target.closest("input") ||
+    e.target.closest("select") ||
+    e.target.closest("label")
+  ) return;
+
+  const cardLink = e.target.closest("[data-link]");
+  if (!cardLink) return;
+
+  const url = cardLink.dataset.link;
+
+  if (!url || url === "null" || url === "undefined" || url === "#") return;
+
+  if (!url.startsWith("/")) return;
+
+  e.stopPropagation();
+  window.location.href = url;
+});
+
+
+document.getElementById("toggleMarcas")?.addEventListener("click", () => {
+
+  const cont = document.getElementById("filtroMarcas");
+  if (!cont) return;
+
+  cont.classList.toggle("hidden");
+
+  const icon = document.querySelector("#toggleMarcas i");
+  icon?.classList.toggle("rotate-180");
+
+});
+
+document.getElementById("toggleMarcasMobile")?.addEventListener("click", () => {
+
+  const cont = document.getElementById("filtroMarcasMobile");
+  if (!cont) return;
+
+  cont.classList.toggle("hidden");
+
+  const icon = document.querySelector("#toggleMarcasMobile i");
+  icon?.classList.toggle("rotate-180");
+
+});
+
+
+// Sincronizar desktop y móvil
+
+const soloDesktop = document.getElementById("soloOfertas");
+const soloMobile = document.getElementById("soloOfertasMobile");
+
+soloDesktop?.addEventListener("change", e => {
+  filtrosActivos.soloOfertas = e.target.checked;
+  if (soloMobile) soloMobile.checked = e.target.checked;
+  aplicarFiltrosGlobales();
+});
+
+soloMobile?.addEventListener("change", e => {
+  filtrosActivos.soloOfertas = e.target.checked;
+  if (soloDesktop) soloDesktop.checked = e.target.checked;
+  aplicarFiltrosGlobales();
+});
+
+
+const ordenarDesktop = document.getElementById("ordenar");
+const ordenarMobile = document.getElementById("ordenarMobile");
+
+ordenarDesktop?.addEventListener("change", e => {
+  if (ordenarMobile) ordenarMobile.value = e.target.value;
+});
+
+ordenarMobile?.addEventListener("change", e => {
+  if (ordenarDesktop) ordenarDesktop.value = e.target.value;
+  ordenarDesktop?.dispatchEvent(new Event("change"));
+});
 
 /* =========================================================
    INIT
 ========================================================= */
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
   console.log("MODO_ADMIN:", MODO_ADMIN);
 
@@ -1312,7 +1610,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ?.classList.remove("hidden");
   }
 
-  initZonas();
-  cargarCatalogo();
+  await cargarCatalogo();  // 🔥 primero productos
+  initZonas();             // 🔥 luego carrusel
 
 });

@@ -12,12 +12,12 @@ import {
 import { abrirCarrito } from "./carrito.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const btnCarrito = document.getElementById("btnCarrito");
-  if (btnCarrito) {
-    btnCarrito.addEventListener("click", abrirCarrito);
-  }
+  document
+    .querySelectorAll("#btnCarrito, #btnCarritoDesktop")
+    .forEach(btn => {
+      btn.addEventListener("click", abrirCarrito);
+    });
 });
-
 /* =========================================================
    🧱 LAYOUT BASE GLOBAL (NO SE BORRA)
 ========================================================= */
