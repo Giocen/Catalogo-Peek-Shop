@@ -245,7 +245,21 @@ const { data, error } = await query;
 ========================================================= */
 const contenedor = document.getElementById("productos");
 let productosCache = [];
+let paginaActual = 1;
+const productosPorPagina = 20;
+let productosFiltradosGlobal = [];
 
+let esMovil = window.innerWidth < 768;
+
+window.addEventListener("resize", () => {
+  const antes = esMovil;
+  esMovil = window.innerWidth < 768;
+
+  if (antes !== esMovil) {
+    paginaActual = 1;
+    renderPagina();
+  }
+});
 /* =========================================================
    🔗 GENERAR LINK AUTOMÁTICO CARRUSEL
 ========================================================= */
@@ -358,7 +372,10 @@ function aplicarFiltrosGlobales() {
 
 window.history.replaceState({}, "", url);
 
-  renderProductos(resultado);
+  productosFiltradosGlobal = resultado;
+  paginaActual = 1;
+
+  renderPagina();
   actualizarContador(resultado.length);
   renderChips();
   sincronizarChecksMarcas();
@@ -494,7 +511,10 @@ async function cargarCatalogo() {
       aplicarFiltrosGlobales();
     }
     else {
-      renderProductos(productosCache);
+      productosFiltradosGlobal = productosCache;
+      paginaActual = 1;
+      renderPagina();
+      actualizarContador(productosCache.length);
       actualizarBreadcrumb(null, null);
     }
 
@@ -659,6 +679,26 @@ function renderProductos(productos) {
   
 }
 
+/* =========================================================
+   PAGINACIÓN
+========================================================= */
+
+function renderPagina() {
+
+  if (esMovil) {
+    renderScrollInfinito();
+    return;
+  }
+
+  const inicio = (paginaActual - 1) * productosPorPagina;
+  const fin = inicio + productosPorPagina;
+
+  const productosPagina = productosFiltradosGlobal.slice(inicio, fin);
+
+  renderProductos(productosPagina);
+  renderPaginacion();
+}
+
 function actualizarContador(total) {
   const el = document.getElementById("contadorResultados");
   if (!el) return;
@@ -673,6 +713,60 @@ setTimeout(() => {
   }
 }, 50);
 
+
+let cargandoScroll = false;
+
+function renderScrollInfinito() {
+
+  const totalCargados = paginaActual * productosPorPagina;
+  const productosMostrar = productosFiltradosGlobal.slice(0, totalCargados);
+
+  renderProductos(productosMostrar);
+
+  observerScroll();
+}
+
+let observer;
+
+function observerScroll() {
+
+  if (observer) observer.disconnect();
+
+  
+    const anterior = document.getElementById("scrollSentinel");
+    if (anterior) anterior.remove();
+
+    const sentinel = document.createElement("div");
+    sentinel.id = "scrollSentinel";
+    sentinel.className = "h-10";
+
+    document.getElementById("productos").appendChild(sentinel);
+
+  observer = new IntersectionObserver(entries => {
+
+    if (entries[0].isIntersecting && !cargandoScroll) {
+
+      const totalMostrados = paginaActual * productosPorPagina;
+
+      if (totalMostrados >= productosFiltradosGlobal.length) return;
+
+      cargandoScroll = true;
+
+      paginaActual++;
+
+      setTimeout(() => {
+        renderScrollInfinito();
+        cargandoScroll = false;
+      }, 300);
+
+    }
+
+  }, {
+    rootMargin: "200px"
+  });
+
+  observer.observe(sentinel);
+}
 /* =========================================================
    ANIMACIÓN
 ========================================================= */
@@ -831,13 +925,14 @@ window.mostrarTodos = () => {
     busqueda: ""
   };
 
-  renderProductos(productosCache);
-  actualizarBreadcrumb(null, null);
+  productosFiltradosGlobal = productosCache;
+  paginaActual = 1;
+
+  renderPagina();
   actualizarContador(productosCache.length);
-  renderFiltroMarcas(productosCache);
-  
-  
-};
+    
+    
+  };
 
 function actualizarBreadcrumb(cat, mascota) {
 
@@ -1096,7 +1191,9 @@ function actualizarBreadcrumbMarca(marca) {
 
             resultado.sort((a, b) => getPrecio(b) - getPrecio(a));
           }
-        renderProductos(resultado);
+        productosFiltradosGlobal = resultado;
+        paginaActual = 1;
+        renderPagina();
         
       });
 
@@ -1614,3 +1711,105 @@ document.addEventListener("DOMContentLoaded", async () => {
   initZonas();             // 🔥 luego carrusel
 
 });
+
+function renderPaginacion() {
+
+  const cont = document.getElementById("paginacion");
+  if (!cont) return;
+
+  // 🔥 OCULTAR PAGINACIÓN EN MÓVIL
+  if (esMovil) {
+    cont.innerHTML = "";
+    return;
+  }
+
+  const totalPaginas = Math.ceil(productosFiltradosGlobal.length / productosPorPagina);
+
+  if (totalPaginas <= 1) {
+    
+    cont.innerHTML = "";
+    return;
+  }
+
+  let html = `
+    <div class="flex items-center gap-2 bg-white px-4 py-3 rounded-2xl shadow-md">
+  `;
+
+  // Flecha anterior
+  if (paginaActual > 1) {
+    html += `
+      <button
+        onclick="cambiarPagina(${paginaActual - 1})"
+        class="w-9 h-9 flex items-center justify-center rounded-xl
+               bg-gray-100 hover:bg-yellow-100
+               transition-all duration-200
+               hover:scale-105 active:scale-95">
+        ‹
+      </button>
+    `;
+  }
+
+  for (let i = 1; i <= totalPaginas; i++) {
+
+    if (
+      i === 1 ||
+      i === totalPaginas ||
+      (i >= paginaActual - 1 && i <= paginaActual + 1)
+    ) {
+
+      html += `
+        <button
+          onclick="cambiarPagina(${i})"
+          class="min-w-[36px] h-9 px-3 text-sm font-medium
+                 rounded-xl transition-all duration-200
+                 ${i === paginaActual
+                    ? "bg-yellow-500 text-white shadow-lg scale-105"
+                    : "bg-gray-100 hover:bg-gray-200 hover:scale-105"}
+          ">
+          ${i}
+        </button>
+      `;
+    }
+
+    else if (
+      i === paginaActual - 2 ||
+      i === paginaActual + 2
+    ) {
+      html += `
+        <span class="px-2 text-gray-400 select-none">
+          ...
+        </span>
+      `;
+    }
+  }
+
+  // Flecha siguiente
+  if (paginaActual < totalPaginas) {
+    html += `
+      <button
+        onclick="cambiarPagina(${paginaActual + 1})"
+        class="w-9 h-9 flex items-center justify-center rounded-xl
+               bg-gray-100 hover:bg-yellow-100
+               transition-all duration-200
+               hover:scale-105 active:scale-95">
+        ›
+      </button>
+    `;
+  }
+
+  html += `</div>`;
+
+  cont.innerHTML = html;
+}
+
+window.cambiarPagina = (num) => {
+
+  paginaActual = num;
+  renderPagina();
+
+  window.scrollTo({
+    top: document.getElementById("productos").offsetTop - 80,
+    behavior: "smooth"
+  });
+
+};
