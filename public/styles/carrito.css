@@ -4,12 +4,16 @@
 
 .cart-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
   background: rgba(0,0,0,.4);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 
-  z-index: 999999; 
+  z-index: 2147483647; /* 🔥 nivel máximo */
 
   display: flex;
   justify-content: flex-end;
@@ -19,11 +23,13 @@
 ================================================== */
 
 .cart-panel {
-  position: relative; 
+  position: relative;
+  z-index: 2147483648;
 
   width: 100%;
   max-width: 400px;
-  height: 100vh;
+  height: 100dvh; 
+
 
   background: rgba(255,255,255,.92);
   backdrop-filter: blur(18px);
@@ -39,9 +45,8 @@
   flex-direction: column;
 
   animation: cartSlideIn .25s ease-out;
-
-  z-index: 1000000; 
-}   
+  overflow: hidden;
+}
 
 /* ==================================================
    HEADER
@@ -243,6 +248,9 @@
   padding: 16px 18px;
   border-top: 1px solid rgba(0,0,0,.05);
   background: #ffffff;
+
+  position: sticky;
+  bottom: 0;
 }
 
 .cart-summary-row {
@@ -289,7 +297,7 @@
 }
 
 /* ==================================================
-   SWEETALERT STYLING (AISLADO)
+   SWEETALERT STYLING
 ================================================== */
 
 .swal-form {
@@ -329,9 +337,7 @@
   }
 }
 
-.cart-overlay {
-  overflow: hidden;
-}
+/* Mantener solo esto */
 
 .cart-panel {
   overflow: hidden;
@@ -339,4 +345,119 @@
 
 .cart-body {
   overflow-y: auto;
+}
+
+/* ==============================
+   PEEKSHOP DELIVERY MODAL
+============================== */
+
+.ps-delivery {
+  text-align: center;
+}
+
+.ps-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.ps-product {
+  background: linear-gradient(135deg,#f8fafc,#eef2ff);
+  padding: 14px;
+  border-radius: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.06);
+}
+
+.ps-product-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ps-product-sub {
+  font-size: 14px;
+  color: #64748b;
+}
+
+.ps-toggle {
+  position: relative;
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 20px;
+  padding: 6px;
+  margin-bottom: 18px;
+}
+
+.ps-indicator {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: calc(50% - 6px);
+  height: calc(100% - 12px);
+  background: linear-gradient(135deg,#16a34a,#15803d);
+  border-radius: 16px;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+
+.ps-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  padding: 12px;
+  cursor: pointer;
+  z-index: 2;
+  color: #334155;
+  transition: .2s;
+}
+
+.ps-btn.active {
+  color: white;
+}
+
+.ps-cost-box {
+  background: linear-gradient(135deg,#dcfce7,#bbf7d0);
+  padding: 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  box-shadow: 0 8px 25px rgba(0,0,0,.08);
+}
+
+/* ===============================
+   SWEET ALERT - IOS STYLE INPUTS
+================================= */
+
+.swal2-input,
+.swal2-textarea {
+  border-radius: 18px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+  padding: 14px 16px !important;
+  font-size: 15px !important;
+  transition: all .2s ease !important;
+  box-shadow: none !important;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus {
+  border-color: #22c55e !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(34,197,94,.15) !important;
+}
+
+.swal2-textarea {
+  min-height: 90px !important;
+  resize: none !important;
+}
+
+/* Quitar espacio extra default SweetAlert */
+.swal2-textarea {
+  min-height: 70px !important;
+  margin: 0 !important;
+}
+
+/* Espaciado más limpio entre campos */
+.swal-form .swal2-input,
+.swal-form .swal2-textarea {
+  margin-top: 8px !important;
 }

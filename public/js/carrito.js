@@ -121,12 +121,24 @@ export function abrirCarrito() {
 function renderPortal() {
 
   const carrito = getCarrito();
-  const portal = document.getElementById("cart-portal");
+  // 🔥 Crear overlay dinámicamente sin depender de cart-portal
+  let portal = document.getElementById("peekshop-cart-overlay");
 
-      if (!portal) {
-        console.error("cart-portal no existe en el DOM");
-        return;
-      }
+  if (portal) portal.remove();
+
+ portal = document.createElement("div");
+  portal.id = "peekshop-cart-overlay";
+  portal.className = "cart-overlay";
+
+  portal.style.position = "fixed";
+  portal.style.inset = "0";
+  portal.style.background = "rgba(15,23,42,.55)";
+  portal.style.backdropFilter = "blur(6px)";
+  portal.style.zIndex = "2147483647";
+  portal.style.display = "flex";
+  portal.style.justifyContent = "flex-end";
+
+  document.body.appendChild(portal);
   document.body.style.overflow = "hidden";
   const subtotal = carrito.reduce((a, p) =>
     a + Number(p.precio) * Number(p.cantidad), 0);
@@ -158,106 +170,127 @@ function renderPortal() {
         ? "0 0 10px rgba(250,204,21,.8), 0 0 20px rgba(245,158,11,.6)"
         : "none";
 
-  portal.innerHTML = `
-<div class="cart-overlay">
-  
-  <div class="cart-panel">
+        portal.innerHTML = `
+        <div class="cart-panel">
+        <div style="
+            width:100%;
+            max-width:420px;
+            height:100vh;
+            background:rgba(255,255,255,.95);
+            backdrop-filter:blur(18px);
+            display:flex;
+            flex-direction:column;
+            box-shadow:-25px 0 70px rgba(0,0,0,.35);
+            animation:slideCart .25s ease-out;
+          ">
 
-    <!-- HEADER -->
-    <div class="cart-header">
-      <div>
-        <div class="cart-title">
-          <i data-lucide="shopping-cart"></i>
-          Tu carrito
-        </div>
-        <div class="cart-subtitle">
-          ${carrito.length} productos
-        </div>
-      </div>
+          <!-- HEADER -->
+          <div class="cart-header">
+            <div>
+              <div class="cart-title">
+                <i data-lucide="shopping-cart"></i>
+                Tu carrito
+              </div>
+              <div class="cart-subtitle">
+                ${carrito.length} productos
+              </div>
+            </div>
 
-      <button class="cart-close" onclick="window._cerrarCarrito()">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-
-    <!-- BADGE ENVÍO -->
-    ${
-      zona === "Caucel"
-        ? (
-            subtotal >= 400
-              ? `
-                <div class="shipping-success">
-                  🚚 ¡Envío GRATIS desbloqueado!
-                </div>
-              `
-              : `
-                <div class="shipping-progress">
-                  <div class="shipping-text">
-                    Te faltan <strong>$${faltan > 0 ? faltan : 0}</strong>
-                    para envío gratis
-                  </div>
-                  <div class="progress-bar">
-                    <div class="progress-fill"
-                      style="
-                        width:${progreso}%;
-                        background:${colorBarra};
-                        box-shadow:${glowBarra};
-                      ">
-                    </div>
-                  </div>
-                </div>
-              `
-          )
-        : `
-          <div class="shipping-warning">
-            📲 El envío en Mérida se cotiza por WhatsApp
+            <button class="cart-close" onclick="window._cerrarCarrito()">
+              <i data-lucide="x"></i>
+            </button>
           </div>
-        `
-    }
 
-    <!-- ENTREGA -->
-    <div class="delivery-toggle">
+          <!-- BADGE ENVÍO -->
+          ${
+            zona === "Caucel"
+              ? (
+                  subtotal >= 400
+                    ? `
+                      <div class="shipping-success">
+                        🚚 ¡Envío GRATIS desbloqueado!
+                      </div>
+                    `
+                    : `
+                      <div class="shipping-progress">
+                        <div class="shipping-text">
+                          Te faltan <strong>$${faltan > 0 ? faltan : 0}</strong>
+                          para envío gratis
+                        </div>
+                        <div class="progress-bar">
+                          <div class="progress-fill"
+                            style="
+                              width:${progreso}%;
+                              background:${colorBarra};
+                              box-shadow:${glowBarra};
+                            ">
+                          </div>
+                        </div>
+                      </div>
+                    `
+                )
+              : `
+                <div class="shipping-warning">
+                  📲 El envío en Mérida se cotiza por WhatsApp
+                </div>
+              `
+          }
 
-      <div class="delivery-indicator"
-        style="left:${tipoEntrega === "envio" ? "4px" : "calc(50% + 2px)"}">
-      </div>
+          <!-- ENTREGA -->
+          <div class="delivery-toggle">
 
-      <button
-        class="delivery-btn ${tipoEntrega === "envio" ? "active" : ""}"
-        onclick="window._setEntrega('envio')">
-        <i data-lucide="truck"></i>
-        Envío
-      </button>
+            <div class="delivery-indicator"
+              style="left:${tipoEntrega === "envio" ? "4px" : "calc(50% + 2px)"}">
+            </div>
 
-      <button
-        class="delivery-btn ${tipoEntrega === "tienda" ? "active" : ""}"
-        onclick="window._setEntrega('tienda')">
-        <i data-lucide="store"></i>
-        Recoger
-      </button>
+            <button
+              class="delivery-btn ${tipoEntrega === "envio" ? "active" : ""}"
+              onclick="window._setEntrega('envio')">
+              <i data-lucide="truck"></i>
+              Envío
+            </button>
 
-    </div>
+            <button
+              class="delivery-btn ${tipoEntrega === "tienda" ? "active" : ""}"
+              onclick="window._setEntrega('tienda')">
+              <i data-lucide="store"></i>
+              Recoger
+            </button>
 
-    <!-- BODY -->
-    <div id="cartBody" class="cart-body"></div>
+          </div>
 
-    <!-- FOOTER -->
-    <div class="cart-footer">
-      <div id="cartTotal" class="cart-total"></div>
+          <!-- BODY -->
+          <div id="cartBody" class="cart-body"></div>
 
-      <button id="btnEnviar" class="checkout-btn">
-        ${
-          zona === "Caucel"
-            ? "Finalizar pedido"
-            : "Cotizar envío por WhatsApp"
-        }
-      </button>
-    </div>
+          <!-- FOOTER -->
+          <div class="cart-footer">
+            <div id="cartTotal" class="cart-total"></div>
 
-  </div>
+            <button id="btnEnviar" class="checkout-btn">
+              ${
+                zona === "Caucel"
+                  ? "Finalizar pedido"
+                  : "Cotizar envío por WhatsApp"
+              }
+            </button>
+          </div>
 
-</div>
-`;
+          </div>
+
+        <style>
+          @keyframes slideCart {
+            from { 
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to { 
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+        </style>
+
+      `;
 
   const btn = document.getElementById("btnEnviar");
 
@@ -470,20 +503,21 @@ window._cartDel = (id, presId, color) => {
 };
 
 window._cerrarCarrito = () => {
-  const portal = document.getElementById("cart-portal");
-  if (portal) portal.innerHTML = "";
+  const overlay = document.getElementById("peekshop-cart-overlay");
+  if (overlay) overlay.remove();
   document.body.style.overflow = "";
 };
-
 
 /* ================= DATOS CLIENTE ================= */
  function pedirDatosCliente(esCompraDirecta = false) {
 
+  const esEnvio = tipoEntrega === "envio";
+
   Swal.fire({
-    title: "Datos de Envío",
+    title: esEnvio ? "Datos de Envío" : "Datos del Cliente",
     width: 420,
     background: "#ffffff",
-    confirmButtonText: "Continuar",
+    confirmButtonText: esEnvio ? "Continuar con envío" : "Continuar",
     cancelButtonText: "Cancelar",
     showCancelButton: true,
     customClass: {
@@ -493,67 +527,90 @@ window._cerrarCarrito = () => {
       popup: "animate__animated animate__bounceIn"
     },
     html: `
-                <div class="swal-form">
+        <div class="swal-form">
 
-                  <div class="swal-info-box">
-                    <div class="swal-info-icon">🔒</div>
-                    <div>
-                      <strong>Información protegida</strong><br>
-                      Tus datos se utilizan únicamente como referencia
-                      para la entrega y confirmación del pedido.
-                      No compartimos tu información con terceros.
-                    </div>
-                  </div>
+          <div class="swal-info-box">
+            <div class="swal-info-icon">🔒</div>
+            <div>
+              <strong>Información protegida</strong><br>
+              ${
+                esEnvio
+                  ? "Tus datos se utilizan para la entrega y confirmación del pedido."
+                  : "Tus datos se utilizan para identificar tu pedido en tienda."
+              }
+            </div>
+          </div>
 
-                  <input 
-                    id="swal-nombre"
-                    class="swal2-input swal-custom-input"
-                    placeholder="Nombre completo">
+          <input 
+            id="swal-nombre"
+            class="swal2-input swal-custom-input"
+            placeholder="Nombre completo">
 
-                  ${
-                    tipoEntrega === "envio"
-                      ? `
-                      <textarea
-                        id="swal-direccion"
-                        class="swal2-textarea swal-custom-input"
-                        placeholder="Dirección completa">
-                      </textarea>
-                      `
-                      : ""
-                  }
+          ${
+            esEnvio
+              ? `
+                <textarea
+                  id="swal-direccion"
+                  class="swal2-textarea swal-custom-input"
+                  placeholder="Dirección completa"></textarea>
 
-                  <textarea
-                    id="swal-referencia"
-                    class="swal2-textarea swal-custom-input"
-                    placeholder="Referencia (opcional)">
-                  </textarea>
+                <textarea
+                  id="swal-referencia"
+                  class="swal2-textarea swal-custom-input"
+                  placeholder="Referencia (opcional)"></textarea>
+              `
+              : ""
+          }
 
-                </div>
-              `,
+        </div>
+      `,
+
+      didOpen: () => {
+        const popup = Swal.getPopup();
+        const textareas = popup.querySelectorAll("textarea");
+
+        textareas.forEach(t => {
+          t.style.height = "auto";
+          t.style.overflow = "hidden";
+
+          t.addEventListener("input", () => {
+            t.style.height = "auto";
+            t.style.height = t.scrollHeight + "px";
+          });
+        });
+      },
+      
     preConfirm: () => {
-      const nombre = document.getElementById("swal-nombre").value.trim();
-      const direccion =
-        tipoEntrega === "envio"
-          ? document.getElementById("swal-direccion").value.trim()
-          : "";
 
-      if (!nombre || (tipoEntrega === "envio" && !direccion)) {
-        Swal.showValidationMessage("Completa los datos requeridos");
+      const nombre = document.getElementById("swal-nombre").value.trim();
+      const direccion = esEnvio
+        ? document.getElementById("swal-direccion")?.value.trim()
+        : "";
+
+      const referencia = document.getElementById("swal-referencia")?.value.trim() || "";
+
+      if (!nombre) {
+        Swal.showValidationMessage("Ingresa tu nombre");
         return false;
       }
 
-      return { nombre, direccion };
+      if (esEnvio && !direccion) {
+        Swal.showValidationMessage("Ingresa la dirección completa");
+        return false;
+      }
+
+      return { nombre, direccion, referencia };
     }
-      }).then(r => {
-        if (r.isConfirmed) {
-          mostrarResumenPedido(r.value, esCompraDirecta);
-        }
-      });
+
+  }).then(r => {
+    if (r.isConfirmed) {
+      mostrarResumenPedido(r.value, esCompraDirecta);
+    }
+  });
 
 }
 
 window.pedirDatosCliente = pedirDatosCliente;
-
 /* ================= WHATS ================= */
 function enviarWhats(cliente, numeroPedido, totales) {
     let msg = `PEDIDO PEEK SHOP\n\n`;
@@ -689,8 +746,8 @@ guardar();
   localStorage.removeItem("compra_directa");
   guardar();
 
-  const portal = document.getElementById("cart-portal");
-  if (portal) portal.innerHTML = "";
+  const overlay = document.getElementById("peekshop-cart-overlay");
+    if (overlay) overlay.remove();
 }
 
 
@@ -993,35 +1050,32 @@ function seleccionarTipoEntregaCompraDirecta() {
       popup: "animate__animated animate__fadeInUp"
     },
     html: `
-            <div class="swal-delivery">
+            <div class="ps-delivery">
 
-              <h3 class="swal-delivery-title">
+              <div class="ps-title">
                 ¿Cómo deseas recibir tu pedido?
-              </h3>
-
-              <!-- Producto -->
-              <div class="swal-product-box">
-                <strong>${producto.nombre}</strong><br>
-                Subtotal: <strong>$${subtotal}</strong>
               </div>
 
-              <!-- Toggle -->
-              <div class="swal-toggle">
+              <div class="ps-product">
+                <div class="ps-product-name">${producto.nombre}</div>
+                <div class="ps-product-sub">Subtotal: $${subtotal}</div>
+              </div>
 
-                <div id="swalToggleIndicator" class="swal-toggle-indicator"></div>
+              <div class="ps-toggle">
 
-                <button id="optEnvio" class="swal-toggle-btn">
+                <div id="swalToggleIndicator" class="ps-indicator"></div>
+
+                <button id="optEnvio" class="ps-btn">
                   🚚 Envío
                 </button>
 
-                <button id="optTienda" class="swal-toggle-btn">
+                <button id="optTienda" class="ps-btn">
                   🏪 Recoger
                 </button>
 
               </div>
 
-              <!-- Costo estimado -->
-              <div id="costoEstimado" class="swal-cost-box"></div>
+              <div id="costoEstimado" class="ps-cost-box"></div>
 
             </div>
           `,
@@ -1071,25 +1125,28 @@ function seleccionarTipoEntregaCompraDirecta() {
           };
         }
 
-      function actualizarUI() {
+     function actualizarUI() {
 
-        btnEnvio.style.background =
-          seleccion === "envio" ? "#16a34a" : "transparent";
-        btnEnvio.style.color =
-          seleccion === "envio" ? "white" : "#334155";
+          const indicator = document.getElementById("swalToggleIndicator");
 
-        btnTienda.style.background =
-          seleccion === "tienda" ? "#16a34a" : "transparent";
-        btnTienda.style.color =
-          seleccion === "tienda" ? "white" : "#334155";
+          btnEnvio.classList.remove("active");
+          btnTienda.classList.remove("active");
 
-        const envioInfo = calcularEnvio();
+          if (seleccion === "envio") {
+            btnEnvio.classList.add("active");
+            indicator.style.left = "6px";
+          } else {
+            btnTienda.classList.add("active");
+            indicator.style.left = "calc(50% + 0px)";
+          }
 
-        costoBox.innerHTML = `
-          ${envioInfo.texto}<br>
-          Total estimado: <strong>$${subtotal + envioInfo.envio}</strong>
-        `;
-      }
+          const envioInfo = calcularEnvio();
+
+          costoBox.innerHTML = `
+            ${envioInfo.texto}<br>
+            Total estimado: <strong>$${subtotal + envioInfo.envio}</strong>
+          `;
+        }
 
       btnEnvio.onclick = () => {
         seleccion = "envio";
@@ -1137,3 +1194,11 @@ function actualizarToggleEntrega() {
     indicator.style.left = "calc(50% + 2px)";
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btnCarrito = document.getElementById("btnCarrito");
+
+  if (btnCarrito) {
+    btnCarrito.addEventListener("click", abrirCarrito);
+  }
+});

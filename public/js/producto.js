@@ -26,8 +26,7 @@ const LAYOUT_BASE = [
 
   { componente: "brand", zona: "right", orden: 1 },
   { componente: "name", zona: "right", orden: 2 },
-  { componente: "category", zona: "right", orden: 3 },
-
+  { componente: "category", zona: "right", orden: 3 },  
   { componente: "offer", zona: "right", orden: 4 },
 
   { componente: "price", zona: "right", orden: 5 },     
@@ -190,7 +189,7 @@ cont.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 
           <!-- IZQUIERDA -->
-          <div class="space-y-6">
+          <div class="space-y-4">
             ${LAYOUT_BASE
               .filter(b => b.zona === "left")
               .sort((a,b)=>a.orden-b.orden)
@@ -199,7 +198,7 @@ cont.innerHTML = `
           </div>
 
           <!-- DERECHA -->
-          <div class="space-y-6">
+          <div class="space-y-4">
             ${LAYOUT_BASE
               .filter(b => b.zona === "right")
               .sort((a,b)=>a.orden-b.orden)
@@ -341,12 +340,9 @@ cont.innerHTML = `
       </button>
     </div>
 
-    <div class="p-6 overflow-y-auto flex-1 text-sm md:text-base leading-6">
+    <div class="p-6 overflow-y-auto flex-1">
       ${ctx.p.descripcion
-        ? ctx.p.descripcion
-            .split("\n")
-            .map(t => `<div class="mb-3">${escaparHTML(t)}</div>`)
-            .join("")
+        ? formatearDescripcion(ctx.p.descripcion)
         : ""}
     </div>
 
@@ -355,31 +351,9 @@ cont.innerHTML = `
 
 
 
-// 🔥 Marcar visualmente la presentación por default
-if (window._presentacionSeleccionada) {
-
-  const id = window._presentacionSeleccionada.id;
-
-  setTimeout(() => {
-
-    const btn = document.querySelector(`.variante[data-id="${id}"]`);
-
-    if (btn) {
-      btn.classList.add(
-        "ring-2",
-        "ring-yellow-400",
-        "bg-yellow-50",
-        "border-yellow-400"
-      );
-    }
-
-    actualizarEnvio(window._presentacionSeleccionada.precio);
-
-  }, 0);
-}
-
   activarZoom();  
   activarBotones(p, imgs[0]);
+  activarSelectorPresentaciones();
   cargarRelacionados(p.categoria, p.id);
   actualizarEnvio(ctx.p.precio);
 
@@ -451,6 +425,39 @@ setTimeout(() => {
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
         }
+
+        function formatearDescripcion(contenido = "") {
+
+            return contenido
+              .split("\n")
+              .filter(t => t.trim() !== "")
+              .map(t => {
+
+                const partes = t.split(":");
+
+                if (partes.length > 1) {
+
+                  const titulo = escaparHTML(partes.shift().trim());
+                  const resto = escaparHTML(partes.join(":").trim());
+
+                  return `
+                    <div class="mb-3 text-gray-700 text-[15px] leading-7">
+                      <strong class="font-semibold text-gray-900">
+                        ${titulo}:
+                      </strong>
+                      ${resto}
+                    </div>
+                  `;
+                }
+
+                return `
+                  <div class="mb-3 text-gray-700 text-[15px] leading-7">
+                    ${escaparHTML(t)}
+                  </div>
+                `;
+              })
+              .join("");
+          }
 
   
         function renderGaleria(imgs) {
@@ -831,6 +838,22 @@ function renderComponente(b, ctx) {
     case "category":
           return "";
 
+/* ================= Offer ================= */
+        case "offer": {
+
+        const pres = window._presentacionSeleccionada;
+
+        if (!pres?.en_oferta) return "";
+
+        return `
+          <div class="inline-flex items-center gap-2 
+                      bg-red-600 text-white 
+                      text-xs font-semibold 
+                      px-3 py-1 rounded-full shadow-sm">
+            🔥 Oferta especial
+          </div>
+        `;
+      }
     /* ================= PRECIO ================= */
         case "price": {
 
@@ -891,28 +914,29 @@ function renderComponente(b, ctx) {
     case "color":
       return ctx.p.colores?.length
         ? `
-          <div class="space-y-3">
+          <div class="space-y-2">
 
-            
-            <div class="text-sm font-medium text-gray-700">
+            <div class="text-xs uppercase tracking-wide text-gray-500">
               Color seleccionado:
             </div>
 
-            <div class="flex gap-4 flex-wrap">
+            <div class="flex gap-3 flex-wrap">
 
               ${ctx.p.colores.map((c,i) => `
-                <div class="flex flex-col items-center gap-1">
-
-                  <button
-                    class="color-btn w-10 h-10 rounded-full border-2
-                          transition-all duration-200 hover:scale-110
-                          ${i === 0 ? 'ring-2 ring-blue-600 border-blue-600 scale-110' : 'border-gray-300'}"
-                    data-color="${c}"
-                    onclick="seleccionarColor('${c}')"
-                    style="background:${c}">
-                  </button>
-
-                </div>
+                <button
+                  class="color-btn
+                        w-7 h-7
+                        rounded-full
+                        border
+                        transition-all duration-200
+                        hover:scale-110
+                        ${i === 0
+                          ? 'ring-2 ring-blue-600 border-blue-600 scale-110'
+                          : 'border-gray-300'}"
+                  data-color="${c}"
+                  onclick="seleccionarColor('${c}')"
+                  style="background:${c}">
+                </button>
               `).join("")}
 
             </div>
@@ -955,76 +979,105 @@ case "envio":
     </div>
   `;
             /* ================= VARIANTES ================= */
-       case "variant":
 
-        return ctx.presentaciones?.length
-          ? `
-            <div class="variantes grid gap-2"
-                style="grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));">
+      case "variant":
 
-              ${ctx.presentaciones.map(v => `
-                <div
-                  class="variante border rounded-lg px-3 py-2
-                        text-center text-sm font-medium
-                        hover:border-yellow-400
-                        cursor-pointer transition-all duration-200"
-                  data-id="${v.id}"
-                  onclick="seleccionarPresentacion('${v.id}')">
+        if (!ctx.presentaciones?.length) return "";
 
-                  ${v.talla}
+        return `
+          <div class="mt-4">
 
-                </div>
-              `).join("")}
+            <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
+              Presentación
+            </div>
+
+            <div class="flex flex-wrap gap-2 items-center">
+
+              ${ctx.presentaciones.map(v => {
+
+                const activo =
+                  window._presentacionSeleccionada?.id === v.id;
+
+                return `
+                  <button
+                    data-id="${v.id}"
+                    onclick="seleccionarPresentacion('${v.id}')"
+                    class="variante
+                          px-3 py-1.5
+                          text-xs
+                          rounded-md
+                          border
+                          ${activo
+                            ? "bg-black text-white border-black"
+                            : "bg-white text-gray-700 border-gray-300"}
+                          transition-all duration-200">
+
+                    ${v.talla || (v.cantidad + ' ' + (v.unidad || ''))}
+
+                  </button>
+                `;
+              }).join("")}
 
             </div>
-          `
-          : "";
-    /* ================= BOTONES ================= */
-    case "buttons":
-      return `
-        <div class="space-y-3 mt-4">
-          <button id="btnComprarAhora"
-            class="w-full bg-blue-600 text-white py-3 rounded-lg">
-            Comprar ahora
-          </button>
-          <button id="btnAgregar"
-            class="w-full border border-blue-600 text-blue-600 py-3 rounded-lg">
-            Agregar al carrito
-          </button>
-        </div>
-      `;
 
-  
-    }
-}
+          </div>
+        `;
+          /* ================= BOTONES ================= */
+        case "buttons":
+            return `
+              <div class="space-y-2 mt-5">
+
+                <button id="btnComprarAhora"
+                  class="w-full bg-black hover:bg-gray-900
+                        text-white py-2
+                        rounded-md text-sm font-medium">
+                  Comprar ahora
+                </button>
+
+                <button id="btnAgregar"
+                  class="w-full border border-gray-300
+                        text-gray-800 hover:bg-gray-100
+                        py-2 rounded-md text-sm font-medium">
+                  Agregar al carrito
+                </button>
+
+              </div>
+            `;
+        
+          }
+      }
 
 window.seleccionarPresentacion = id => {
 
-  const pres = window._presentaciones.find(p => p.id === id);
-  if (!pres) return;
+      const pres = window._presentaciones.find(p => p.id == id);
+      if (!pres) return;
 
-  window._presentacionSeleccionada = pres;
+      window._presentacionSeleccionada = pres;
 
-  // 🔥 Re-renderizar solo el bloque precio
-  const bloquePrecio = document.getElementById("bloquePrecio");
+      // Actualizar precio
+      const bloquePrecio = document.getElementById("bloquePrecio");
+      if (bloquePrecio) {
+        bloquePrecio.outerHTML = renderComponente(
+          { componente: "price" },
+          { p: window._productoActual }
+        );
+      }
 
-  if (bloquePrecio) {
-    bloquePrecio.outerHTML = renderComponente(
-      { componente: "price" },
-      { p: window._productoActual }
-    );
-  }
+      actualizarEnvio(pres.precio);
 
-  actualizarEnvio(pres.precio);
+      // Reset visual
+      document.querySelectorAll(".variante").forEach(b => {
+        b.classList.remove("bg-black","text-white","border-black");
+        b.classList.add("bg-white","text-gray-700","border-gray-300");
+      });
 
-  document.querySelectorAll(".variante").forEach(b =>
-    b.classList.remove("ring-2", "ring-yellow-400", "bg-yellow-50")
-  );
+      const btn = document.querySelector(`.variante[data-id="${id}"]`);
 
-  const btn = document.querySelector(`.variante[data-id="${id}"]`);
-  if (btn) btn.classList.add("ring-2", "ring-yellow-400", "bg-yellow-50");
-};
-
+      if (btn) {
+        btn.classList.remove("bg-white","text-gray-700","border-gray-300");
+        btn.classList.add("bg-black","text-white","border-black");
+      }
+    };
 
 function actualizarEnvio(precio) {
 
@@ -1580,3 +1633,20 @@ window.addEventListener("popstate", event => {
   }
 
 });
+
+function activarSelectorPresentaciones() {
+
+  document.querySelectorAll(".variante").forEach(btn => {
+
+    btn.addEventListener("click", () => {
+
+      const id = btn.dataset.id;
+      if (!id) return;
+
+      seleccionarPresentacion(id);
+
+    });
+
+  });
+
+}
