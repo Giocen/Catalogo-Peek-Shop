@@ -213,3 +213,37 @@
   100% { background-position: 0 0 }
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.carrito-anim {
+  transform: scale(1.1);
+  transition: transform .2s ease;
+}
+
+.producto-appear {
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+.producto-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity .4s ease, transform .4s ease;
+}
+#zona-superior {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* Ocultar scrollbar carrusel */
+.carrusel-peek::-webkit-scrollbar {
+  display: none;
+}
+

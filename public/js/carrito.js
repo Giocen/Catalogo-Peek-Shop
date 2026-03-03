@@ -27,6 +27,13 @@ function celebrarEnvioGratis() {
   lanzarConfetti();
 }
 
+
+function formatearPrecio(valor) {
+  return Number(valor).toLocaleString("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
 /* ================= ABRIR ================= */
 export function abrirCarrito() {
 
@@ -349,7 +356,7 @@ function renderItems() {
 
         <div class="cart-item-info">
           <div class="cart-item-name">${p.nombre}</div>
-          <div class="cart-item-price">$${precio}</div>
+          <div class="cart-item-price">$${formatearPrecio(precio)}</div>
 
           <div class="cart-qty">
 
@@ -373,7 +380,7 @@ function renderItems() {
         </div>
 
         <div class="cart-item-right">
-          <div class="cart-item-total">$${totalItem}</div>
+          <div class="cart-item-total">$${formatearPrecio(totalItem)}</div>
 
           <button
             class="qty-btn qty-delete"
@@ -408,7 +415,7 @@ function renderItems() {
   totalEl.innerHTML = `
     <div class="cart-summary-row">
       <span>Subtotal</span>
-      <span>$${subtotal}</span>
+      <span>$${formatearPrecio(subtotal)}</span>
     </div>
 
     <div class="cart-summary-row">
@@ -418,7 +425,7 @@ function renderItems() {
           tipoEntrega === "tienda"
             ? "Gratis"
             : zona === "Caucel"
-              ? (envio === 0 ? "Gratis" : `$${envio}`)
+              ? (envio === 0 ? "Gratis" : `$${formatearPrecio(envio)}`)
               : "Cotizar por WhatsApp"
         }
       </span>
@@ -426,7 +433,7 @@ function renderItems() {
 
     <div class="cart-summary-total">
       <span>Total</span>
-      <span>$${totalFinal}</span>
+      <span>$${formatearPrecio(totalFinal)}</span>
     </div>
   `;
 
@@ -633,15 +640,15 @@ function enviarWhats(cliente, numeroPedido, totales) {
 
     productos.forEach(p => {
       msg += `${p.nombre}\n`;
-      msg += `x${p.cantidad}  $${p.precio * p.cantidad}\n\n`;
+      msg += `x${p.cantidad}  $${formatearPrecio(p.precio * p.cantidad)}\n\n`;
     });
     
     msg += `----------------------\n`;
     msg += `RESUMEN\n`;
     msg += `----------------------\n`;
-    msg += `Subtotal: $${totales.subtotal}\n`;
+    msg += `Subtotal: $${formatearPrecio(totales.subtotal)}\n`;
     msg += `Envío: ${totales.envio === 0 ? "GRATIS" : `$${totales.envio}`}\n`;
-    msg += `TOTAL: $${totales.total}\n\n`;
+    msg += `TOTAL: $${formatearPrecio(totales.total)}\n\n`;
     msg += `Gracias por tu compra`;
     
   
@@ -847,7 +854,7 @@ guardar();
             </div>
 
             <div style="font-weight:700">
-              $${p.precio * p.cantidad}
+              $${formatearPrecio(p.precio * p.cantidad)}
             </div>
           </div>
         `).join("")}
@@ -856,7 +863,7 @@ guardar();
 
         <div style="display:flex;justify-content:space-between">
           <span>Subtotal</span>
-          <span>$${totales.subtotal}</span>
+          <span>$${formatearPrecio(totales.subtotal)}</span>
         </div>
 
         <div style="display:flex;justify-content:space-between">
@@ -879,7 +886,7 @@ guardar();
           font-weight:800;
           margin-top:8px">
           <span>Total</span>
-          <span>$${totales.total}</span>
+          <span>$${formatearPrecio(totales.total)}</span>
         </div>
 
       </div>

@@ -1,4 +1,4 @@
- /* ==========producto.save.js=============== */
+/* ========== producto.save.js =============== */
 
 export async function guardarProducto({
   supabase,
@@ -14,99 +14,140 @@ export async function guardarProducto({
 
   let productoId = productoActual;
 
+  /* ================= PRODUCTO ================= */
 
-/* ================= PRODUCTO ================= */
+  if (presentaciones?.length) {
 
-// 🔥 RECALCULAR PRECIO DESDE PRESENTACIONES (ANTI-NULL)
-if (presentaciones?.length) {
+    const preciosValidos = presentaciones
+      .filter(p => p.activo)
+      .map(p => {
+        const precio = p.en_oferta && p.precio_oferta
+          ? Number(p.precio_oferta)
+          : Number(p.precio);
 
-  const preciosValidos = presentaciones
-    .filter(p => p.activo)
-    .map(p => {
-      const precio = p.en_oferta && p.precio_oferta
-        ? Number(p.precio_oferta)
-        : Number(p.precio);
+        return precio > 0 ? precio : null;
+      })
+      .filter(p => p !== null);
 
-      return precio > 0 ? precio : null;
-    })
-    .filter(p => p !== null);
-
-  if (preciosValidos.length) {
-    payload.precio = Math.min(...preciosValidos);
+    if (preciosValidos.length) {
+      payload.precio = Math.min(...preciosValidos);
+    }
   }
-}
 
-const precioNumerico = Number(payload?.precio);
+  const precioNumerico = Number(payload?.precio);
 
-if (!Number.isFinite(precioNumerico) || precioNumerico <= 0) {
-  throw new Error("El producto debe tener al menos una presentación activa con precio válido");
-}
+  if (!Number.isFinite(precioNumerico) || precioNumerico <= 0) {
+    throw new Error("El producto debe tener al menos una presentación activa con precio válido");
+  }
 
-const payloadSeguro = {
-  ...payload,
-  precio: precioNumerico
-};
-
-if (productoActual) {
-
-  const { error } = await supabase
-    .from("catalogo_productos")
-    .update(payloadSeguro)
-    .eq("id", productoActual);
-
-  if (error) throw error;
-
-} else {
-
-  const { data, error } = await supabase
-    .from("catalogo_productos")
-    .insert(payloadSeguro)
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  productoId = data.id;
-}
-
-  /* ================= PRESENTACIONES ================= */
+  const payloadSeguro = {
+    ...payload,
+    precio: precioNumerico
+  };
 
   if (productoActual) {
 
+    const { error } = await supabase
+      .from("catalogo_productos")
+      .update(payloadSeguro)
+      .eq("id", productoActual);
+
+    if (error) throw error;
+
+  } else {
+
+    const { data, error } = await supabase
+      .from("catalogo_productos")
+      .insert(payloadSeguro)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    productoId = data.id;
+  }
+
+  /* ================= PRESENTACIONES ================= */
+
+  // 🔥 TRAER ACTUALES SIEMPRE
+  const { data: actuales, error: errActuales } = await supabase
+    .from("catalogo_presentaciones")
+    .select("id")
+    .eq("producto_id", productoId);
+
+  if (errActuales) throw errActuales;
+
+  const idsActuales = actuales?.map(p => p.id) || [];
+  const idsFormulario = (presentaciones || [])
+    .filter(p => p.id)
+    .map(p => p.id);
+
+  const idsEliminar = idsActuales.filter(
+    id => !idsFormulario.includes(id)
+  );
+
+  if (idsEliminar.length) {
     const { error: errDelete } = await supabase
       .from("catalogo_presentaciones")
       .delete()
-      .eq("producto_id", productoId);
+      .in("id", idsEliminar);
 
     if (errDelete) throw errDelete;
   }
 
-  if (presentaciones?.length) {
+  // 🔥 INSERT / UPDATE
+  for (let i = 0; i < (presentaciones || []).length; i++) {
 
-    const dataInsert = presentaciones.map(p => ({
+    const p = presentaciones[i];
+
+    let imagenURL = p.imagen?.trim() ? p.imagen.trim() : null;
+
+    if (p.fileImagen) {
+      imagenURL = await subirMediaSupabase(
+        p.fileImagen,
+        productoId,
+        `pres_${i}`
+      );
+    }
+
+    const dataPres = {
       producto_id: productoId,
-      nombre: p.nombre,
-      unidad: p.unidad,
-      cantidad: p.cantidad,
-      talla: p.talla,
-      costo: Number(p.costo),
-      precio: Number(p.precio),
+      nombre: p.nombre || "",
+      unidad: p.unidad || "pieza",
+      cantidad: Number(p.cantidad) || 1,
+      talla: p.talla || null,
+      costo: p.costo ? Number(p.costo) : 0,
+      precio: p.precio ? Number(p.precio) : 0,
       precio_oferta: p.precio_oferta
         ? Number(p.precio_oferta)
         : null,
-      en_oferta: p.en_oferta,
-      margen: Number(p.margen),
-      stock: Number(p.stock),
-      activo: p.activo,
+      en_oferta: !!p.en_oferta,
+      margen: Number(p.margen) || 0,
+      stock: Number(p.stock) || 0,
+      activo: !!p.activo,
       sku: generarSKU(p),
-      detalle: p.detalle || ""
-    }));
+      detalle: p.detalle || "",
+      imagen: imagenURL,
+      color: p.color || null
+    };
 
-    const { error: errInsert } = await supabase
-      .from("catalogo_presentaciones")
-      .insert(dataInsert);
+    if (p.id) {
 
-    if (errInsert) throw errInsert;
+      const { error: errUpdate } = await supabase
+        .from("catalogo_presentaciones")
+        .update(dataPres)
+        .eq("id", p.id);
+
+      if (errUpdate) throw errUpdate;
+
+    } else {
+
+      const { error: errInsert } = await supabase
+        .from("catalogo_presentaciones")
+        .insert(dataPres);
+
+      if (errInsert) throw errInsert;
+    }
   }
 
   /* ================= MULTIMEDIA ================= */
@@ -122,24 +163,24 @@ if (productoActual) {
     if (errDeleteMedia) throw errDeleteMedia;
   }
 
-  await Promise.all(
-    media.map(async (m, i) => {
-      if (!m.file) return;
+  for (let i = 0; i < media.length; i++) {
 
-      const url = await subirMediaSupabase(m.file, productoId, i);
+    const m = media[i];
+    if (!m.file) continue;
 
-      const { error } = await supabase
-        .from("catalogo_multimedia")
-        .insert({
-          producto_id: productoId,
-          tipo: m.tipo === "image" ? "imagen" : "video",
-          url,
-          orden: i
-        });
+    const url = await subirMediaSupabase(m.file, productoId, i);
 
-      if (error) throw error;
-    })
-  );
+    const { error } = await supabase
+      .from("catalogo_multimedia")
+      .insert({
+        producto_id: productoId,
+        tipo: m.tipo === "image" ? "imagen" : "video",
+        url,
+        orden: i
+      });
+
+    if (error) throw error;
+  }
 
   return productoId;
 }

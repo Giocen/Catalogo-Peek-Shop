@@ -168,11 +168,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 250);
   });
 
-  /* =====================================================
-     MODAL HORARIO ESTILO APPLE
-  ===================================================== */
+/* =====================================================
+   MODALES HEADER (FUNCIONA EN MÓVIL Y DESKTOP)
+===================================================== */
 
-document.getElementById("btnHorario")?.addEventListener("click", () => {
+// Delegación global (soporta múltiples botones)
+document.addEventListener("click", (e) => {
+
+  /* ================= HORARIO ================= */
+
+  if (e.target.closest(".btn-horario")) {
+    mostrarHorario();
+  }
+
+  /* ================= ENVÍOS ================= */
+
+  if (e.target.closest(".btn-envios")) {
+    mostrarEnvios();
+  }
+
+  /* ================= UBICACIÓN ================= */
+
+  if (e.target.closest(".btn-ubicacion")) {
+    window.open("https://maps.app.goo.gl/r5SchUKfgtPcyReb7", "_blank");
+  }
+
+});
+
+
+/* =====================================================
+   FUNCIÓN HORARIO
+===================================================== */
+
+function mostrarHorario() {
 
   const estado = getEstadoHorario();
   const tiempo = estado.proximoCambio
@@ -184,16 +212,13 @@ document.getElementById("btnHorario")?.addEventListener("click", () => {
       <div class="mb-4 p-5 rounded-2xl
                   bg-gradient-to-r from-green-50 to-emerald-50
                   border border-green-200
-                  flex items-center gap-4
-                  transition-all duration-500 ease-out">
+                  flex items-center gap-4">
 
         <div class="w-10 h-10 flex items-center justify-center
-                    rounded-full bg-green-100
-                    transition-all duration-500">
+                    rounded-full bg-green-100">
 
           <i data-lucide="sun"
-             class="w-5 h-5 text-green-600
-                    transition-all duration-500"></i>
+             class="w-5 h-5 text-green-600"></i>
         </div>
 
         <div>
@@ -210,16 +235,13 @@ document.getElementById("btnHorario")?.addEventListener("click", () => {
       <div class="mb-4 p-5 rounded-2xl
                   bg-gradient-to-r from-gray-50 to-slate-100
                   border border-gray-200
-                  flex items-center gap-4
-                  transition-all duration-500 ease-out">
+                  flex items-center gap-4">
 
         <div class="w-10 h-10 flex items-center justify-center
-                    rounded-full bg-gray-200
-                    transition-all duration-500">
+                    rounded-full bg-gray-200">
 
           <i data-lucide="moon"
-             class="w-5 h-5 text-gray-700
-                    transition-all duration-500"></i>
+             class="w-5 h-5 text-gray-700"></i>
         </div>
 
         <div>
@@ -239,7 +261,7 @@ document.getElementById("btnHorario")?.addEventListener("click", () => {
     confirmButtonText: "Entendido",
     confirmButtonColor: "#111827",
     customClass: {
-      popup: "rounded-[28px] shadow-2xl animate__animated animate__fadeInUp"
+      popup: "rounded-[28px] shadow-2xl"
     },
     html: `
       <div class="text-left text-sm text-gray-700 space-y-6">
@@ -289,63 +311,63 @@ document.getElementById("btnHorario")?.addEventListener("click", () => {
       </div>
     `,
     didOpen: () => {
-      if (window.lucide) {
-        lucide.createIcons();
-      }
+      lucide.createIcons();
     }
   });
 
-});
+}
 
 
+/* =====================================================
+   FUNCIÓN ENVÍOS
+===================================================== */
 
-  /* =====================================================
-     ENVÍOS PREMIUM
-  ===================================================== */
+function mostrarEnvios() {
 
-  document.getElementById("btnEnvios")?.addEventListener("click", () => {
+  Swal.fire({
+    title: "Información de Envíos",
+    width: 460,
+    confirmButtonText: "Entendido",
+    confirmButtonColor: "#111827",
+    background: "#ffffff",
+    customClass: {
+      popup: "rounded-3xl shadow-2xl"
+    },
+    html: `
+      <div class="text-left text-sm text-gray-700 space-y-6">
 
-    Swal.fire({
-      title: "Información de Envíos",
-      width: 460,
-      confirmButtonText: "Entendido",
-      confirmButtonColor: "#111827",
-      background: "#ffffff",
-      customClass: {
-        popup: "rounded-3xl shadow-2xl"
-      },
-      html: `
-        <div class="text-left text-sm text-gray-700 space-y-6">
-
-          <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
-            <div class="font-semibold mb-2 flex items-center gap-2">
-              <i data-lucide="truck" class="w-4 h-4"></i>
-              Ciudad Caucel
-            </div>
-            Envío GRATIS en compras mayores a <strong>$400</strong><br>
-            Menor a $400 → <strong>$25</strong>
+        <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+          <div class="font-semibold mb-2 flex items-center gap-2">
+            <i data-lucide="truck" class="w-4 h-4"></i>
+            Ciudad Caucel
           </div>
-
-          <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
-            <div class="font-semibold mb-2 flex items-center gap-2">
-              <i data-lucide="message-circle" class="w-4 h-4"></i>
-              Otros fraccionamientos
-            </div>
-            Se cotiza por WhatsApp
-          </div>
-
+          Envío GRATIS en compras mayores a <strong>$400</strong><br>
+          Menor a $400 → <strong>$25</strong>
         </div>
-      `,
-      didOpen: () => lucide.createIcons()
-    });
+
+        <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+          <div class="font-semibold mb-2 flex items-center gap-2">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            Otros fraccionamientos
+          </div>
+          Se cotiza por WhatsApp
+        </div>
+
+      </div>
+    `,
+    didOpen: () => {
+      lucide.createIcons();
+    }
   });
 
-  /* =====================================================
-     UBICACIÓN
-  ===================================================== */
+}
 
-  document.getElementById("btnUbicacion")?.addEventListener("click", () => {
+ document.addEventListener("click", (e) => {
+
+  if (e.target.closest(".btn-ubicacion")) {
     window.open("https://maps.app.goo.gl/r5SchUKfgtPcyReb7", "_blank");
-  });
+  }
+
+});
 
 });

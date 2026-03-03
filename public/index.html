@@ -28,58 +28,214 @@
 
 <body class="bg-gradient-to-b from-gray-50 to-gray-100 text-gray-800">
 
-<!-- ================= HEADER ================= -->
-<header id="mainHeader"
-        class="bg-yellow-400 sticky top-0 z-50 shadow-sm transition-all duration-300">
+  <header id="mainHeader"
+  class="sticky top-0 z-50 bg-yellow-400 border-b border-yellow-500">
 
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+  <!-- CONTENEDOR HEADER -->
+<div class="max-w-7xl mx-auto px-4 py-3
+            flex flex-col md:flex-row
+            md:items-center md:justify-between
+            gap-4">
 
-    <a href="/" class="flex items-center shrink-0">
+  <!-- IZQUIERDA: LOGO -->
+  <div class="flex items-center justify-between w-full md:w-auto">
+
+    <a href="/" class="flex items-center gap-2 group">
+
       <img src="/img/logo-peekshop.png"
-           class="h-10 md:h-12 object-contain mix-blend-multiply">
+           class="w-14 h-14 md:w-16 md:h-16
+                  object-contain
+                  transition-transform duration-300
+                  group-hover:scale-105">
+
+      <span class="text-gray-900
+                   font-black
+                   text-xl md:text-2xl
+                   tracking-tight
+                   leading-none">
+        Peek Shop
+      </span>
     </a>
 
-    <div class="flex-1">
-      <div class="relative">
-        <input id="buscador"
-          type="text"
-          placeholder="Buscar alimento, juguetes..."
-          class="w-full rounded-full px-4 py-2 pr-12 text-sm bg-white shadow-sm focus:ring-2 focus:ring-yellow-600">
-        <button class="absolute right-1 top-1 bottom-1 px-3 bg-yellow-500 hover:bg-yellow-600 rounded-full flex items-center justify-center">
-          <i data-lucide="search" class="w-4 h-4 text-white"></i>
-        </button>
-      </div>
-    </div>
+    <!-- FACEBOOK SOLO MÓVIL -->
+    <div class="flex md:hidden items-center">
 
+    <a href="https://www.facebook.com/share/1JnhBJnYDL/"
+       target="_blank"
+      class="w-10 h-10 flex items-center justify-center
+              rounded-full bg-white shadow-sm">
+
+      <svg viewBox="0 0 24 24"
+          class="w-6 h-6 fill-[#1877F2]">
+        <path d="M22 12a10 10 0 1 0-11.6 9.9v-7h-2.5V12h2.5V9.8c0-2.5 1.5-3.8 3.7-3.8 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/>
+      </svg>
+
+    </a>
+
+  </div>
+
+  </div>
+
+
+  <!-- CENTRO: BUSCADOR -->
+  <div class="w-full md:flex-1 md:px-6">
+
+    <div class="relative w-full md:max-w-2xl md:mx-auto">
+
+      <input id="buscador"
+             type="text"
+             placeholder="Buscar alimento, juguetes..."
+             class="w-full rounded-full px-6 py-3 pr-14 text-sm
+                    bg-white shadow-md
+                    focus:ring-2 focus:ring-gray-900">
+
+      <button
+        class="absolute right-2 top-1/2 -translate-y-1/2
+               w-10 h-10
+               bg-gray-900 hover:bg-black
+               rounded-full flex items-center justify-center">
+
+        <i data-lucide="search"
+           class="w-4 h-4 text-white"></i>
+      </button>
+
+    </div>
+  </div>
+
+
+  <!-- DERECHA: REDES + CARRITO (SOLO PC) -->
+  <div class="hidden md:flex items-center gap-4">
+
+    <!-- FACEBOOK -->
+<a href="https://www.facebook.com/share/1JnhBJnYDL/"
+   target="_blank"
+   class="flex flex-col items-center text-xs text-gray-600 active:text-blue-600 transition">
+
+  <svg viewBox="0 0 24 24"
+       class="w-6 h-6 mb-1 text-[#1877F2]"
+       fill="currentColor">
+    <path d="M22 12a10 10 0 1 0-11.5 9.9v-7h-2.3v-2.9h2.3V9.4c0-2.3 1.4-3.6 3.5-3.6 1 0 2 .2 2 .2v2.3h-1.2c-1.2 0-1.6.8-1.6 1.5v1.8h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/>
+  </svg>
+
+  Facebook
+</a>
+
+<!-- WHATSAPP -->
+<a href="https://wa.me/5219991494268"
+   target="_blank"
+   class="flex flex-col items-center text-xs text-gray-600 active:text-green-600 transition">
+
+  <svg viewBox="0 0 24 24"
+       class="w-6 h-6 mb-1 text-[#25D366]"
+       fill="currentColor">
+    <path d="M12 2a10 10 0 0 0-8.6 15l-1 3.7 3.8-1A10 10 0 1 0 12 2zm5.3 13.8c-.2.6-1.3 1.2-1.8 1.3-.5.1-1 .2-1.6 0a8.7 8.7 0 0 1-3-1.4 11.3 11.3 0 0 1-3.2-4c-.2-.6-.2-1.1 0-1.6.2-.5.7-1.2 1.1-1.4.4-.2.8-.2 1 0 .3.1.5.4.6.6l.5 1.2c.1.3 0 .6-.1.8l-.3.4c-.1.1-.1.3 0 .4.2.4.6 1 1.2 1.6.7.6 1.3 1 1.7 1.2.1.1.3.1.4 0l.4-.3c.2-.1.5-.2.8-.1l1.2.5c.2.1.5.3.6.6.1.2.1.6 0 1z"/>
+  </svg>
+
+  WhatsApp
+</a>
+
+    <!-- Carrito -->
     <button id="btnCarritoDesktop"
-      class="hidden md:flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition relative">
-      <i data-lucide="shopping-cart" class="w-5 h-5"></i>
-      <span class="text-sm font-medium">Carrito</span>
+            class="flex items-center gap-2
+                   bg-white px-5 py-2.5
+                   rounded-full shadow-sm
+                   hover:shadow-md transition relative">
+
+      <i data-lucide="shopping-cart"
+         class="w-5 h-5 text-gray-800"></i>
+
+      <span class="text-sm font-semibold text-gray-800">
+        Carrito
+      </span>
+
       <span id="carritoCount"
-        class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
+            class="absolute -top-2 -right-2
+                   bg-red-500 text-white text-[10px]
+                   font-bold px-1.5 py-[2px]
+                   rounded-full shadow">
         0
       </span>
+
     </button>
 
   </div>
+
+</div>
 </header>
 
-<!-- ================= BARRA INFO ================= -->
-<div class="bg-yellow-500 text-white text-xs py-2 px-4 text-center flex justify-center gap-3">
-  <button id="btnEnvios" class="inline-flex items-center gap-1 underline hover:text-yellow-100 transition">
-    <i data-lucide="truck" class="w-4 h-4"></i>
-    Envíos en Mérida
-  </button>
-  ·
-  <button id="btnHorario" class="inline-flex items-center gap-1 underline hover:text-yellow-100 transition">
-    <i data-lucide="clock" class="w-4 h-4"></i>
-    Ver horario
-  </button>
-  ·
-  <button id="btnUbicacion" class="inline-flex items-center gap-1 underline hover:text-yellow-100 transition">
-    <i data-lucide="map-pin" class="w-4 h-4"></i>
-    Mi ubicación
-  </button>
+<!-- BARRA INFO RESPONSIVE -->
+<div class="bg-yellow-500">
+
+  <div class="max-w-7xl mx-auto px-4 py-2">
+
+    <!-- DESKTOP -->
+    <div class="hidden md:flex justify-center items-center">
+      <div class="flex items-center justify-center gap-8
+                  bg-white
+                  px-8 py-3
+                  rounded-full
+                  shadow-md
+                  w-fit mx-auto">
+
+        <button class="btn-envios flex items-center gap-2 text-sm font-medium text-gray-900 hover:opacity-70 transition whitespace-nowrap">
+          <i data-lucide="truck" class="w-4 h-4"></i>
+          Envíos en Mérida
+        </button>
+
+        <div class="w-px h-4 bg-gray-400/40"></div>
+
+        <button class="btn-horario flex items-center gap-2 text-sm font-medium text-gray-900 hover:opacity-70 transition whitespace-nowrap">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+          Ver horario
+        </button>
+
+        <div class="w-px h-4 bg-gray-400/40"></div>
+
+        <button class="btn-ubicacion flex items-center gap-2 text-sm font-medium text-gray-900 hover:opacity-70 transition whitespace-nowrap">
+          <i data-lucide="map-pin" class="w-4 h-4"></i>
+          Mi ubicación
+        </button>
+
+      </div>
+    </div>
+
+    <!-- MOBILE -->
+    <div class="flex md:hidden gap-3 overflow-x-auto no-scrollbar">
+
+      <button id="btnEnvios"
+        class="btn-envios flex items-center gap-2 text-xs font-medium
+               bg-white/20 backdrop-blur-md
+               border border-white/40
+               px-4 py-2 rounded-full
+               whitespace-nowrap">
+        <i data-lucide="truck" class="w-4 h-4"></i>
+        Envíos
+      </button>
+
+      <button id="btnHorario"
+        class="btn-horario flex items-center gap-2 text-xs font-medium
+               bg-white/20 backdrop-blur-md
+               border border-white/40
+               px-4 py-2 rounded-full
+               whitespace-nowrap">
+        <i data-lucide="clock" class="w-4 h-4"></i>
+        Horario
+      </button>
+
+      <button id="btnUbicacion"
+        class="btn-ubicacion flex items-center gap-2 text-xs font-medium
+               bg-white/20 backdrop-blur-md
+               border border-white/40
+               px-4 py-2 rounded-full
+               whitespace-nowrap">
+        <i data-lucide="map-pin" class="w-4 h-4"></i>
+        Ubicación
+      </button>
+
+    </div>
+
+  </div>
+
 </div>
 
 <!-- ================= ZONA SUPERIOR ================= -->
@@ -143,7 +299,7 @@
     </aside>
 
     <!-- MAIN -->
-    <main class="pb-28">
+    <main class="pb-[110px] md:pb-28">
 
       <div class="flex items-center justify-between mb-4">
         <div id="contadorResultados"
@@ -180,35 +336,38 @@
 <nav class="md:hidden fixed bottom-0 left-0 right-0
             bg-white/95 backdrop-blur-md
             border-t shadow-xl
-            flex justify-around items-center py-3 z-40">
+            flex justify-around items-center py-3 z-30">
 
+  <!-- Inicio -->
   <button onclick="location.href='/'"
           class="flex flex-col items-center text-xs text-gray-600 active:text-yellow-600 transition">
     <i data-lucide="home" class="w-5 h-5 mb-1"></i>
     Inicio
   </button>
 
+  <!-- Categorías -->
   <button onclick="abrirPanelCategorias()"
           class="flex flex-col items-center text-xs text-gray-600 active:text-yellow-600 transition">
     <i data-lucide="grid-2x2" class="w-5 h-5 mb-1"></i>
     Categorías
   </button>
 
+  <!-- Carrito -->
   <button id="btnCarrito"
           class="relative flex flex-col items-center text-xs text-gray-600 active:text-yellow-600 transition">
     <i data-lucide="shopping-cart" class="w-6 h-6 mb-1"></i>
     Carrito
     <span id="carritoCountMobile"
-      class="absolute -top-1 right-4 bg-red-500 text-white
-             text-[10px] font-semibold px-1.5 py-[1px]
-             rounded-full shadow">
+          class="absolute -top-1 right-4 bg-red-500 text-white
+                 text-[10px] font-semibold px-1.5 py-[1px]
+                 rounded-full shadow">
       0
     </span>
   </button>
 
+  <!-- WhatsApp -->
   <a href="https://wa.me/5219991494268"
      target="_blank"
-     rel="noopener noreferrer"
      class="flex flex-col items-center text-xs text-gray-600 active:text-green-600 transition">
     <i data-lucide="message-circle" class="w-5 h-5 mb-1"></i>
     WhatsApp

@@ -44,149 +44,179 @@ const { data, error } = await query;
     /* =========================================================
       RENDER ICONOS (SOLO ZONA SUPERIOR)
     ========================================================= */
-    if (zona === "superior") {
+if (zona === "superior") {
 
-            const params = new URLSearchParams(window.location.search);
-            const catActiva = params.get("cat");
-            const mascotaActiva = params.get("mascota");
-                cont.innerHTML = `
-                <div class="max-w-7xl mx-auto px-4 py-6 relative carrusel-wrapper">
+  const params = new URLSearchParams(window.location.search);
+  const catActiva = params.get("cat");
+  const mascotaActiva = params.get("mascota");
 
-                  <!-- Flecha izquierda -->
-                  <button id="btnPrev"
-                    class="absolute left-2 top-1/2 -translate-y-1/2 z-20
-                          bg-white shadow-xl rounded-full p-2
-                          hover:scale-110 transition flex">
-                    <i data-lucide="chevron-left" class="w-5 h-5"></i>
+  cont.innerHTML = `
+  <div class="max-w-7xl mx-auto px-4 py-10 relative carrusel-wrapper overflow-visible">
+
+      <!-- Flecha izquierda -->
+      <button id="btnPrev"
+        class="absolute left-2 top-1/2 -translate-y-1/2 z-20
+              bg-white/90 backdrop-blur-md
+              shadow-lg rounded-full p-2
+              hover:scale-110 hover:shadow-xl
+              transition-all duration-300 flex">
+        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+      </button>
+
+      <div id="carruselCategorias"
+         class="flex gap-5 overflow-x-auto
+                scroll-smooth scroll-px-6 snap-x snap-mandatory
+                carrusel-peek no-scrollbar">
+
+        ${data.map(b => {
+
+          const esAdmin = MODO_ADMIN;
+          const texto = b.texto || "";
+
+          const activa =
+            texto === catActiva ||
+            texto === mascotaActiva;
+
+          return `
+            <div class="relative w-[150px] sm:w-[170px] md:w-[190px] lg:w-[210px]
+                        flex-shrink-0 snap-center group">
+
+              ${esAdmin ? `
+                <div class="absolute top-2 right-2 z-30 flex flex-col gap-1">
+
+                  <button onclick="toggleActivo('${b.id}', ${b.activo})"
+                    class="bg-white/95 backdrop-blur px-2 py-1 rounded-lg text-xs shadow hover:scale-105 transition">
+                    ${b.activo ? "🟢 Activo" : "⚫ Inactivo"}
                   </button>
 
-                  <div id="carruselCategorias"
-                      class="flex gap-6 overflow-x-auto scroll-smooth carrusel-peek">
+                  <button onclick="editarBanner('${b.id}')"
+                    class="bg-blue-500 text-white px-2 py-1 rounded-lg text-xs shadow hover:bg-blue-600 transition">
+                    ✏️ Editar
+                  </button>
 
-                    ${data.map(b => {
-                      const esAdmin = MODO_ADMIN;
-
-                      return `
-                        <div class="relative min-w-[200px] flex-shrink-0 group">
-
-                          ${esAdmin ? `                           
-                              <div class="absolute top-2 right-2 z-30 flex flex-col gap-1">
-
-                                <!-- Activar / Desactivar -->
-                                <button onclick="toggleActivo('${b.id}', ${b.activo})"
-                                  class="bg-white/90 backdrop-blur px-2 py-1 rounded text-xs shadow hover:scale-105 transition">
-                                  ${b.activo ? "🟢 Activo" : "⚫ Inactivo"}
-                                </button>
-
-                                <!-- Editar -->
-                                <button onclick="editarBanner('${b.id}')"
-                                  class="bg-blue-500 text-white px-2 py-1 rounded text-xs shadow hover:bg-blue-600 transition">
-                                  ✏️ Editar
-                                </button>
-
-                                <!-- Eliminar -->
-                                <button onclick="eliminarBanner('${b.id}')"
-                                  class="bg-red-500 text-white px-2 py-1 rounded text-xs shadow hover:bg-red-600 transition">
-                                  🗑 Eliminar
-                                </button>
-
-                              </div>
-                            ` : ""}
-
-                            <div draggable="${esAdmin}"
-                                data-id="${b.id}"
-                                class="categoria-card cursor-pointer
-                                transition-all duration-500
-                                hover:-translate-y-2 hover:shadow-2xl"
-                                ${!esAdmin ? `data-link="${generarLinkCategoria(b.texto)}"` : ""}
-                            >
-
-                            <img src="${b.url}"
-                                class="w-full h-48 object-cover rounded-2xl">
-
-                            <div class="text-center mt-2 font-medium">
-                              ${b.texto || ""}
-                            </div>
-
-                          </div>
-
-                        </div>
-                      `;
-                    }).join("")}
-
-                  </div>
-
-                  <!-- Flecha derecha -->
-                  <button id="btnNext"
-                    class="absolute right-2 top-1/2 -translate-y-1/2 z-20
-                          bg-white shadow-xl rounded-full p-2
-                          hover:scale-110 transition flex">
-                    <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                  <button onclick="eliminarBanner('${b.id}')"
+                    class="bg-red-500 text-white px-2 py-1 rounded-lg text-xs shadow hover:bg-red-600 transition">
+                    🗑 Eliminar
                   </button>
 
                 </div>
-                `;
+              ` : ""}
 
-            if (MODO_ADMIN) {
-              activarDragOrden();
-            }
-            setTimeout(() => {
+              <div draggable="${esAdmin}"
+                  data-id="${b.id}"
+                  ${!esAdmin ? `data-link="${generarLinkCategoria(texto)}"` : ""}
+                  class="categoria-card cursor-pointer
+                        rounded-3xl
+                        bg-white
+                        transition-all duration-300
+                        ${activa 
+                          ? "border-2 border-yellow-400 shadow-xl" 
+                          : "border border-gray-100 hover:shadow-xl hover:border-yellow-300"}">
 
-              const carrusel = document.getElementById("carruselCategorias");
-              const prev = document.getElementById("btnPrev");
-              const next = document.getElementById("btnNext");
+                <!-- CONTENEDOR IMAGEN -->
+                <div class="relative w-full aspect-[4/3] 
+                            rounded-t-3xl
+                            overflow-hidden
+                            flex items-center justify-center">
 
-              if (!carrusel) return;
+                  <img 
+                    src="${b.url}?width=1000&quality=95&format=webp"
+                    class="w-full h-full
+                          object-contain
+                          transition-transform duration-500 ease-out
+                          group-hover:scale-110">
+                </div>
 
-              const scrollAmount = 240;
+                <!-- TEXTO -->
+                <div class="text-center py-4 text-sm font-semibold tracking-tight
+                            transition-colors duration-300
+                            ${activa 
+                              ? "text-yellow-700 font-bold" 
+                              : "text-gray-700 group-hover:text-yellow-600"}">
+                  ${texto}
+                </div>
 
-              prev?.addEventListener("click", () => {
-                carrusel.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-              });
+              </div>
 
-              next?.addEventListener("click", () => {
-                carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
-              });
+            </div>
+          `;
 
-              // 🔥 AUTO SCROLL INFINITO
-              function scrollCarrusel() {
-                if (carrusel.scrollLeft + carrusel.clientWidth >= carrusel.scrollWidth - 5) {
-                  carrusel.scrollTo({ left: 0, behavior: "smooth" });
-                } else {
-                  carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
-                }
-              }
+        }).join("")}
 
-              let autoScroll = setInterval(scrollCarrusel, 4000);
+      </div>
 
-              // Pausar cuando el usuario interactúa
-              carrusel.addEventListener("mouseenter", () => {
-                clearInterval(autoScroll);
-              });
+      <!-- Flecha derecha -->
+      <button id="btnNext"
+        class="absolute right-2 top-1/2 -translate-y-1/2 z-20
+              bg-white/90 backdrop-blur-md
+              shadow-lg rounded-full p-2
+              hover:scale-110 hover:shadow-xl
+              transition-all duration-300 flex">
+        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+      </button>
 
-              carrusel.addEventListener("mouseleave", () => {
-                clearInterval(autoScroll);
-                autoScroll = setInterval(scrollCarrusel, 4000);
-              });
+    </div>
+  `;
 
-              carrusel.addEventListener("touchstart", () => {
-                clearInterval(autoScroll);
-              });
 
-              lucide.createIcons();
+  if (MODO_ADMIN) {
+    activarDragOrden();
+  }
 
-            }, 100);
+  setTimeout(() => {
 
-            const carrusel = document.getElementById("carruselCategorias");
-            if (!carrusel) return;
+    const carrusel = document.getElementById("carruselCategorias");
+    const prev = document.getElementById("btnPrev");
+    const next = document.getElementById("btnNext");
 
-            carrusel.addEventListener("dragstart", e => {
-              if (!MODO_ADMIN) e.preventDefault();
-            });
+    if (!carrusel) return;
 
-          
-          } else {
+    const scrollAmount = 200;
 
+    prev?.addEventListener("click", () => {
+      carrusel.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+    });
+
+    next?.addEventListener("click", () => {
+      carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    });
+
+    // 🔥 AUTO SCROLL INFINITO
+    function scrollCarrusel() {
+      if (carrusel.scrollLeft + carrusel.clientWidth >= carrusel.scrollWidth - 5) {
+        carrusel.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        carrusel.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      }
+    }
+
+    let autoScroll = setInterval(scrollCarrusel, 4000);
+
+    carrusel.addEventListener("mouseenter", () => {
+      clearInterval(autoScroll);
+    });
+
+    carrusel.addEventListener("mouseleave", () => {
+      clearInterval(autoScroll);
+      autoScroll = setInterval(scrollCarrusel, 4000);
+    });
+
+    carrusel.addEventListener("touchstart", () => {
+      clearInterval(autoScroll);
+    });
+
+    lucide.createIcons();
+
+  }, 100);
+
+  const carrusel = document.getElementById("carruselCategorias");
+  if (!carrusel) return;
+
+  carrusel.addEventListener("dragstart", e => {
+    if (!MODO_ADMIN) e.preventDefault();
+  });
+
+} else {
             /* =====================================================
               ZONAS NORMALES (IMAGEN / VIDEO)
             ====================================================== */
@@ -196,7 +226,7 @@ const { data, error } = await query;
           <div
             class="rounded-xl overflow-hidden bg-white shadow hover:shadow-lg transition"
             style="grid-column: span ${b.columnas || 4};
-                  height:${b.alto || 180}px"
+                height:${Math.min(b.alto || 180, 320)}px"
           >
             ${
               b.tipo === "video"
@@ -212,9 +242,12 @@ const { data, error } = await query;
                 `
                 : `
                   <img
-                    src="${b.url || '/img/placeholder.png'}"
+                    src="${b.url 
+                      ? b.url + '?width=900&quality=65&format=webp' 
+                      : '/img/placeholder.png'}"
                     loading="lazy"
                     decoding="async"
+                    fetchpriority="low"
                     class="w-full h-full object-cover"
                   />
                 `
@@ -260,6 +293,13 @@ window.addEventListener("resize", () => {
     renderPagina();
   }
 });
+
+function formatearPrecio(valor) {
+  return Number(valor).toLocaleString("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
 /* =========================================================
    🔗 GENERAR LINK AUTOMÁTICO CARRUSEL
 ========================================================= */
@@ -307,9 +347,11 @@ function aplicarFiltrosGlobales() {
         p.categoria !== filtrosActivos.categoria)
       return false;
 
-    if (filtrosActivos.mascota &&
-        p.tipo_mascota !== filtrosActivos.mascota)
-      return false;
+    if (
+        filtrosActivos.mascota &&
+        p.tipo_mascota?.toLowerCase() !== filtrosActivos.mascota.toLowerCase()
+      )
+        return false;
 
     if (
         filtrosActivos.marca.length > 0 &&
@@ -465,14 +507,14 @@ async function cargarCatalogo() {
         .order("es_oferta", { ascending: false })   
         .order("categoria", { ascending: true })    
         .order("nombre", { ascending: true })      
-        .limit(200);
+        
 
     if (error) throw error;
 
     productosCache = data || [];
 
    const params = new URLSearchParams(location.search);
-    const cat = params.get("cat");
+    const cat = params.get("cat") || params.get("categoria");
     const mascota = params.get("mascota");
     const marcaParam = params.get("marca");
     const marca = marcaParam ? marcaParam.split(",") : null;
@@ -494,8 +536,13 @@ async function cargarCatalogo() {
     }
     else if (mascota) {
 
-      const existeCategoria = productosCache.some(p => p.categoria === mascota);
-      const existeMascota = productosCache.some(p => p.tipo_mascota === mascota);
+      const existeCategoria = productosCache.some(
+        p => p.categoria?.toLowerCase() === mascota.toLowerCase()
+      );
+
+      const existeMascota = productosCache.some(
+        p => p.tipo_mascota?.toLowerCase() === mascota.toLowerCase()
+      );
 
       if (existeCategoria) {
         filtrosActivos.categoria = mascota;
@@ -504,7 +551,7 @@ async function cargarCatalogo() {
       } 
       else if (existeMascota) {
         filtrosActivos.categoria = null;
-        filtrosActivos.mascota = mascota;
+        filtrosActivos.mascota = mascota.trim();
         actualizarBreadcrumb(null, mascota);
       }
 
@@ -569,9 +616,18 @@ function renderProductos(productos) {
         .filter(m => m.tipo === "imagen")
         .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
 
-      const img = imagenOrdenada.length
+      const baseImg = imagenOrdenada.length
         ? imagenOrdenada[0].url
         : "/img/placeholder.png";
+
+      const esMovil = window.innerWidth < 768;
+
+      const calidad = esMovil ? 70 : 75;
+      const ancho = esMovil ? 600 : 700;
+
+      const img = baseImg.includes("supabase")
+        ? `${baseImg}?width=${ancho}&quality=${calidad}&format=webp`
+        : baseImg;
 
 
       let precioMin = Number(p.precio);
@@ -637,10 +693,10 @@ function renderProductos(productos) {
 
           <div class="text-base sm:text-[15px] font-semibold text-green-700 mt-1 tracking-tight">
               ${
-                precioMin !== precioMax
-                  ? `$${precioMin.toLocaleString("es-MX")} – $${precioMax.toLocaleString("es-MX")}`
-                  : `$${precioMin.toLocaleString("es-MX")}`
-              }
+                  precioMin !== precioMax
+                    ? `$${formatearPrecio(precioMin)} – $${formatearPrecio(precioMax)}`
+                    : `$${formatearPrecio(precioMin)}`
+                }
             </div>
 
             ${

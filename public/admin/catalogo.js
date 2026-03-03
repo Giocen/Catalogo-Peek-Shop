@@ -826,22 +826,26 @@ modal.classList.remove("hidden");
     .select("*")
     .eq("producto_id", id);
 
-  setPresentaciones((pres || []).map(p => ({
-    nombre: p.nombre || "",
-    unidad: p.unidad,
-    cantidad: p.cantidad,
-    talla: p.talla || "",
-    costo: p.costo,
-    precio: p.precio,
-    precio_oferta: p.precio_oferta,
-    en_oferta: p.en_oferta,
-    margen: p.margen,
-    stock: p.stock,
-    activo: p.activo,
-    sku: p.sku,
-    detalle: p.detalle || ""
-  })));
-
+      setPresentaciones((pres || []).map(p => ({
+        id: p.id,
+        nombre: p.nombre || "",
+        unidad: p.unidad,
+        cantidad: p.cantidad,
+        talla: p.talla || "",
+        costo: p.costo,
+        precio: p.precio,
+        precio_oferta: p.precio_oferta,
+        en_oferta: p.en_oferta,
+        margen: p.margen,
+        stock: p.stock,
+        activo: p.activo,
+        sku: p.sku,
+        detalle: p.detalle,
+        imagen: p.imagen || "",
+        imagenPreview: "",
+        fileImagen: null,
+        color: p.color || ""  
+      })));
   renderPresentaciones(presentacionesDiv);
 
 
@@ -1434,3 +1438,5 @@ if (btnAnalizarTextoIA) {
   };
 
 }
+
+

@@ -18,6 +18,71 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.addEventListener("click", abrirCarrito);
     });
 });
+
+function optimizarImg(url, size = 900) {
+  if (!url) return "/img/placeholder.png";
+
+  if (url.includes("supabase")) {
+    return `${url}?width=${size}&quality=70&format=webp`;
+  }
+
+  return url;
+}
+
+function formatearPrecio(valor) {
+  const numero = Number(valor) || 0;
+  return numero.toLocaleString("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function safeAttr(val = "") {
+  return String(val).replace(/"/g, '\\"');
+}
+
+function normalizarColor(c) {
+  const v = String(c || "").trim().toLowerCase();
+
+  const mapa = {
+    negro: "#111827",
+    blanco: "#ffffff",
+    rojo: "#ef4444",
+    azul: "#3b82f6",
+    verde: "#22c55e",
+    amarillo: "#facc15",
+    naranja: "#fb923c",
+    morado: "#a855f7",
+    rosa: "#ec4899",
+    gris: "#9ca3af",
+    cafe: "#92400e",
+    marron: "#92400e",
+    café: "#92400e"
+  };
+
+  if (/^#([0-9a-f]{3}){1,2}$/i.test(v)) return v;
+  if (mapa[v]) return mapa[v];
+  if (/^(rgb|hsl)a?\(/i.test(v)) return v;
+
+  return "#9ca3af";
+}
+
+function obtenerNombreVariante(variante) {
+  // Prioridad de campos posibles (agrega aquí el real si lo sabes)
+  const candidatos = [
+    "nombre", "nombre_publico", "titulo", "titulo_publico",
+    "nombre_variante", "nombre_presentacion", "nombre_detalle",
+    "descripcion_corta", "detalle", "texto", "label"
+  ];
+
+  for (const k of candidatos) {
+    const v = (variante?.[k] ?? "").toString().trim();
+    if (v) return v;
+  }
+
+  return "";
+}
+
 /* =========================================================
    🧱 LAYOUT BASE GLOBAL (NO SE BORRA)
 ========================================================= */
@@ -31,9 +96,8 @@ const LAYOUT_BASE = [
 
   { componente: "price", zona: "right", orden: 5 },     
   { componente: "variant", zona: "right", orden: 6 },   
-  { componente: "color", zona: "right", orden: 7 },      
-  { componente: "envio", zona: "right", orden: 8 },      
-  { componente: "buttons", zona: "right", orden: 9 },    
+  { componente: "envio", zona: "right", orden: 7 },      
+  { componente: "buttons", zona: "right", orden: 8 },    
 ];
 /* =========================================================
    🔐 DETECTAR ADMIN (NO BLOQUEANTE)
@@ -90,7 +154,7 @@ async function cargarProducto() {
   if (!cont || !id) return;
 
  const { data: p, error } = await supabase
-  .from("catalogo_productos")
+  .from("catalogo_productos") 
   .select(`
     id,
     nombre,
@@ -100,8 +164,7 @@ async function cargarProducto() {
     categoria,
     activo,
     es_oferta,
-    precio_anterior,
-    colores
+    precio_anterior
   `)
   .eq("id", id)
   .eq("activo", true)
@@ -127,23 +190,19 @@ if (!p.activo) {
   p.permitir_compra ??= true;
   p.permitir_carrito ??= true;
 
+
+
   /* ================= MULTIMEDIA ================= */
-const { data: media } = await supabase
+  let imgs = [];
+
+  const { data: media } = await supabase
   .from("catalogo_multimedia")
   .select("*")
   .eq("producto_id", p.id)
   .order("orden");
 
-window._imagenesPorColor = {};
-
-const imgs = [];
-
 media?.forEach(m => {
   if (m.url) imgs.push(m.url);
-
-  if (m.color && m.url) {
-    window._imagenesPorColor[m.color] = m.url;
-  }
 });
 
 if (!imgs.length) {
@@ -151,6 +210,7 @@ if (!imgs.length) {
 }
 
 window._productoActualImgs = imgs;
+window._productoImgsBase = [...imgs];
 
 
   /* ================= PRESENTACIONES ================= */
@@ -162,19 +222,21 @@ window._productoActualImgs = imgs;
     .order("precio");
 
     window._presentaciones = presentaciones || [];
+    console.log("🔎 Ejemplo presentacion:", window._presentaciones?.[0]);
+    if (window._presentaciones.length) {
 
-    window._presentacionSeleccionada =
-  window._presentaciones.find(p => p.en_oferta) ||
-  window._presentaciones[0];
+  const primeraDisponible =
+    window._presentaciones.find(p => p.stock > 0);
 
+  if (primeraDisponible) {
+    window._tallaSeleccionada = primeraDisponible.talla;
+  }
+
+}
 
   const ctx = { p, imgs, presentaciones };
   window._productoActual = p;
-  // 🔹 Auto seleccionar primer color
-    if (p.colores?.length) {
-      window._colorSeleccionado = p.colores[0];
-    }
-
+  window._descripcionOriginal = p.descripcion || "";   
 
   /* ================= RENDER PRINCIPAL ================= */
 cont.innerHTML = `
@@ -350,24 +412,43 @@ cont.innerHTML = `
 `;
 
 
+// ✅ AUTOSELECCIÓN AL CARGAR (precio correcto desde el inicio)
+setTimeout(() => {
+  const pres = window._presentaciones || [];
+  if (!pres.length) return;
+
+  const primera = pres.find(v => (v.stock ?? 999999) > 0) || pres[0];
+  if (!primera) return;
+
+  // si hay talla, selecciona el grupo (esto ya elige color disponible y actualiza UI)
+  const tieneTalla = pres.some(v => String(v.talla || "").trim() !== "");
+  const tieneColor = pres.some(v => String(v.color || "").trim() !== "");
+
+  if (tieneTalla && primera.talla) {
+    window.seleccionarGrupo(primera.talla);
+    return;
+  }
+
+  // si es SOLO color (sin talla), selecciona el primer color
+  if (tieneColor && !tieneTalla && primera.color) {
+    window.seleccionarColor(primera.color);
+    return;
+  }
+
+  // si es simple
+  window.seleccionarPresentacion(primera.id);
+}, 0);
+
 
   activarZoom();  
-  activarBotones(p, imgs[0]);
-  activarSelectorPresentaciones();
+  activarBotones(p, imgs[0]); 
   cargarRelacionados(p.categoria, p.id);
-  actualizarEnvio(ctx.p.precio);
+actualizarEnvio(
+  window._presentacionSeleccionada?.precio || ctx.p.precio
+);
 
-  if (
-  window._colorSeleccionado &&
-  window._imagenesPorColor?.[window._colorSeleccionado]
-) {
-  const img = document.getElementById("imgPrincipal");
-  if (img) {
-    img.src = window._imagenesPorColor[window._colorSeleccionado];
-  }
-}
 
-// 🔥 ACTIVAR ADMIN
+// 🔥 ACTIVAR ADMIN (UNA SOLA VEZ)
 if (window.ES_ADMIN && typeof window.initAdminProducto === "function") {
   window.initAdminProducto();
 }
@@ -395,11 +476,6 @@ setTimeout(() => {
 
 }, 0);
 
-
-  // 🔥 ACTIVAR ADMIN
-  if (window.ES_ADMIN && typeof window.initAdminProducto === "function") {
-    window.initAdminProducto();
-  }
 }
 
 /* =========================================================
@@ -470,7 +546,8 @@ setTimeout(() => {
                   class="relative overflow-hidden rounded-xl bg-white shadow-sm aspect-square">
 
                 <img id="imgPrincipal"
-                    src="${imgs[0]}"
+                    src="${optimizarImg(imgs[0])}"
+                    fetchpriority="high"
                     onclick="abrirLightbox(0)"
                     class="cursor-zoom-in object-contain w-full h-full transition duration-300">
 
@@ -489,8 +566,9 @@ setTimeout(() => {
                   style="min-width:70px"
                   onclick="irAImagen(${i})">
 
-                  <img src="${src}"
-                      class="h-16 w-full object-contain">
+                  <img src="${optimizarImg(src)}"
+                    loading="lazy"
+                    class="h-16 w-full object-contain">
 
                 </div>
               `).join("")}
@@ -548,7 +626,7 @@ setTimeout(() => {
                   ${p.cantidad ? `· ${p.cantidad} ${p.unidad}` : ""}
                   ${p.talla ? `· ${p.talla}` : ""}
                 </div>
-                <div class="font-bold mt-1">$${p.precio}</div>
+                <div class="font-bold mt-1">$${formatearPrecio(p.precio)}</div>
               </div>
             `).join("")}
           </div>`;
@@ -594,7 +672,10 @@ function activarBotones(p, imgBase) {
       presentacion_id: window._presentacionSeleccionada.id,
       nombre: p.nombre,
       precio: window._presentacionSeleccionada.precio,
-      imagen: imgBase,
+      imagen:
+      window._presentacionSeleccionada?.imagen
+        ? window._presentacionSeleccionada.imagen
+        : document.getElementById("imgPrincipal")?.src,
       presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
       color: window._colorSeleccionado || null,
       cantidad: 1
@@ -614,11 +695,14 @@ function activarBotones(p, imgBase) {
           presentacion_id: window._presentacionSeleccionada.id,
           nombre: p.nombre,
           precio: window._presentacionSeleccionada.precio,
-          imagen: imgBase,
+          imagen:
+            window._presentacionSeleccionada?.imagen
+              ? window._presentacionSeleccionada.imagen
+              : document.getElementById("imgPrincipal")?.src,
           presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
           color: window._colorSeleccionado || null,
           cantidad: 1
-        };
+        };  
 
 
         // Ejecutar flujo directo pasando el producto
@@ -750,7 +834,7 @@ async function cargarRelacionados(categoria, actualId) {
           class="block bg-white rounded-lg shadow 
                   hover:shadow-lg transition group p-3">
 
-          <img src="${img}" 
+          <img src="${optimizarImg(img)}"
               class="h-40 w-full object-contain
                       transition-transform duration-300
                       group-hover:scale-105">
@@ -764,8 +848,8 @@ async function cargarRelacionados(categoria, actualId) {
             <div class="font-bold mt-1 text-green-700">
               ${
                 precioMin !== precioMax
-                  ? `$${precioMin} – $${precioMax}`
-                  : `$${precioMin}`
+                  ? `$${formatearPrecio(precioMin)} – $${formatearPrecio(precioMax)}`
+                  : `$${formatearPrecio(precioMin)}`
               }
             </div>
 
@@ -822,17 +906,24 @@ function renderComponente(b, ctx) {
     /* ================= NOMBRE ================= */
         case "name": {
 
-          const esMobileTop = b && b.mobileTop;
+        const esMobileTop = b && b.mobileTop;
 
-          const clase = esMobileTop
-            ? "block md:hidden text-xl font-semibold leading-snug text-gray-900"
-            : "hidden md:block text-xl md:text-2xl font-semibold leading-snug text-gray-900";
+        const clase = esMobileTop
+          ? "block md:hidden text-xl font-semibold leading-snug text-gray-900"
+          : "hidden md:block text-xl md:text-2xl font-semibold leading-snug text-gray-900";
 
-          return `
-            <h1 class="${clase}">
-              ${ctx.p.nombre}
-            </h1>
-          `;
+        const pres = window._presentacionSeleccionada;
+
+       const nombreFinal = pres
+        ? (obtenerNombreVariante(pres) ||
+          `${ctx.p.nombre}${pres.talla ? ` - ${pres.talla}` : ""}${pres.color ? ` - ${pres.color}` : ""}`)
+        : ctx.p.nombre;
+
+        return `
+          <h1 id="nombreProducto" class="${clase}">
+            ${nombreFinal}
+          </h1>
+        `;
       }
     /* ================= CATEGORÍA ================= */
     case "category":
@@ -877,7 +968,7 @@ function renderComponente(b, ctx) {
                 <div class="flex items-center gap-3">
 
                   <div class="text-3xl md:text-4xl font-extrabold text-green-700">
-                    $${precioOferta}
+                    $${formatearPrecio(precioOferta)}
                   </div>
 
                   <span class="text-sm bg-red-600 text-white px-2 py-1 rounded">
@@ -887,7 +978,7 @@ function renderComponente(b, ctx) {
                 </div>
 
                 <div class="text-sm text-gray-500 line-through">
-                  $${precioNormal}
+                  $${formatearPrecio(precioNormal)}
                 </div>
 
               </div>
@@ -897,7 +988,7 @@ function renderComponente(b, ctx) {
 
             htmlPrecio = `
               <div class="text-3xl md:text-4xl font-extrabold text-green-700">
-                $${precioNormal}
+                $${formatearPrecio(precioNormal)}
               </div>
             `;
           }
@@ -909,41 +1000,7 @@ function renderComponente(b, ctx) {
           `;
         }
 
-
-    /* ================= OFERTA ================= */
-    case "color":
-      return ctx.p.colores?.length
-        ? `
-          <div class="space-y-2">
-
-            <div class="text-xs uppercase tracking-wide text-gray-500">
-              Color seleccionado:
-            </div>
-
-            <div class="flex gap-3 flex-wrap">
-
-              ${ctx.p.colores.map((c,i) => `
-                <button
-                  class="color-btn
-                        w-7 h-7
-                        rounded-full
-                        border
-                        transition-all duration-200
-                        hover:scale-110
-                        ${i === 0
-                          ? 'ring-2 ring-blue-600 border-blue-600 scale-110'
-                          : 'border-gray-300'}"
-                  data-color="${c}"
-                  onclick="seleccionarColor('${c}')"
-                  style="background:${c}">
-                </button>
-              `).join("")}
-
-            </div>
-
-          </div>
-        `
-        : "";
+     
  /* ================= ENVIO================= */
 case "envio":
 
@@ -978,106 +1035,159 @@ case "envio":
 
     </div>
   `;
-            /* ================= VARIANTES ================= */
+          /* ================= VARIANTES ================= */
+ case "variant": {
 
-      case "variant":
+  if (!ctx.presentaciones?.length) return "";
 
-        if (!ctx.presentaciones?.length) return "";
+  const tieneColores = ctx.presentaciones.some(p => String(p.color || "").trim() !== "");
+  const tieneTalla   = ctx.presentaciones.some(p => String(p.talla || "").trim() !== "");
 
-        return `
-          <div class="mt-4">
+  // ============================
+  // 🟢 PRESENTACIÓN SIMPLE (sin talla, sin color)
+  // ============================
+  if (!tieneColores && !tieneTalla) {
+    return `
+      <div class="mt-4 variantes">
 
-            <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
-              Presentación
-            </div>
+        <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
+          Presentación
+        </div>
 
-            <div class="flex flex-wrap gap-2 items-center">
+        <div class="flex gap-2 flex-wrap">
+          ${ctx.presentaciones.map(p => `
+            <button
+              class="btn-presentacion px-3 py-2 text-xs rounded-md border bg-white border-gray-300"
+              data-id="${p.id}"
+              onclick="seleccionarPresentacion('${p.id}')">
+              ${p.nombre}
+            </button>
+          `).join("")}
+        </div>
 
-              ${ctx.presentaciones.map(v => {
+      </div>
+    `;
+  }
 
-                const activo =
-                  window._presentacionSeleccionada?.id === v.id;
+  // ============================
+  // 🟣 SOLO COLOR (sin talla)
+  // ============================
+  if (tieneColores && !tieneTalla) {
 
-                return `
-                  <button
-                    data-id="${v.id}"
-                    onclick="seleccionarPresentacion('${v.id}')"
-                    class="variante
-                          px-3 py-1.5
-                          text-xs
-                          rounded-md
-                          border
-                          ${activo
-                            ? "bg-black text-white border-black"
-                            : "bg-white text-gray-700 border-gray-300"}
-                          transition-all duration-200">
+    const coloresUnicos = [
+      ...new Set(ctx.presentaciones.map(p => p.color).filter(Boolean))
+    ];
 
-                    ${v.talla || (v.cantidad + ' ' + (v.unidad || ''))}
+    return `
+      <div class="mt-4 variantes">
 
-                  </button>
-                `;
-              }).join("")}
+        <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
+          Color
+        </div>
 
-            </div>
+        <div class="flex gap-3 flex-wrap">
+          ${coloresUnicos.map(color => {
+            const variante = ctx.presentaciones.find(v => v.color === color);
+            const sinStock = (variante?.stock ?? 999999) <= 0;
+            const activa   = String(color) === String(window._colorSeleccionado);
 
-          </div>
-        `;
-          /* ================= BOTONES ================= */
-        case "buttons":
             return `
-              <div class="space-y-2 mt-5">
-
-                <button id="btnComprarAhora"
-                  class="w-full bg-black hover:bg-gray-900
-                        text-white py-2
-                        rounded-md text-sm font-medium">
-                  Comprar ahora
-                </button>
-
-                <button id="btnAgregar"
-                  class="w-full border border-gray-300
-                        text-gray-800 hover:bg-gray-100
-                        py-2 rounded-md text-sm font-medium">
-                  Agregar al carrito
-                </button>
-
-              </div>
+              <button
+                class="btn-color w-7 h-7 rounded-full border
+                  ${activa ? "ring-2 ring-black border-black" : "border-gray-300"}"
+                data-color="${String(color).replace(/"/g,'&quot;')}"
+                ${sinStock ? "disabled" : ""}
+                onclick='seleccionarColor(${JSON.stringify(color)})'
+                style="
+                  background-color:${normalizarColor(color)};
+                  opacity:${sinStock ? 0.35 : 1};
+                  ${sinStock ? "cursor:not-allowed;" : "cursor:pointer;"}
+                ">
+              </button>
             `;
-        
-          }
-      }
+          }).join("")}
+        </div>
 
-window.seleccionarPresentacion = id => {
+      </div>
+    `;
+  }
 
-      const pres = window._presentaciones.find(p => p.id == id);
-      if (!pres) return;
+  // ============================
+  // 🔵 CON TALLA (y puede tener o no color)
+  // ============================
+  if (tieneTalla) {
 
-      window._presentacionSeleccionada = pres;
+    const gruposUnicos = [
+      ...new Set(ctx.presentaciones.map(p => p.talla).filter(Boolean))
+    ];
 
-      // Actualizar precio
-      const bloquePrecio = document.getElementById("bloquePrecio");
-      if (bloquePrecio) {
-        bloquePrecio.outerHTML = renderComponente(
-          { componente: "price" },
-          { p: window._productoActual }
-        );
-      }
+    return `
+      <div class="mt-4 variantes">
 
-      actualizarEnvio(pres.precio);
+        <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
+          Presentación
+        </div>
 
-      // Reset visual
-      document.querySelectorAll(".variante").forEach(b => {
-        b.classList.remove("bg-black","text-white","border-black");
-        b.classList.add("bg-white","text-gray-700","border-gray-300");
-      });
+        <div class="flex gap-2 flex-wrap">
+          ${gruposUnicos.map(g => `
+            <button
+              class="btn-grupo px-3 py-2 text-xs rounded-md border bg-white border-gray-300"
+              data-grupo="${String(g).replace(/"/g,'&quot;')}"
+              onclick='seleccionarGrupo(${JSON.stringify(g)})'>
+              ${g}
+            </button>
+          `).join("")}
+        </div>
 
-      const btn = document.querySelector(`.variante[data-id="${id}"]`);
+        <div id="bloqueColor" class="mt-4"></div>
 
-      if (btn) {
-        btn.classList.remove("bg-white","text-gray-700","border-gray-300");
-        btn.classList.add("bg-black","text-white","border-black");
-      }
-    };
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+case "buttons": {
+
+  // Si está bloqueado por flags del producto
+  const permitirCarrito = ctx.p.permitir_carrito !== false;
+  const permitirCompra  = ctx.p.permitir_compra !== false;
+
+  if (!permitirCarrito && !permitirCompra) return "";
+
+  return `
+    <div class="space-y-3 pt-2">
+
+      ${permitirCarrito ? `
+        <button id="btnAgregar"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white
+                 py-3 rounded-xl font-semibold
+                 transition active:scale-[.99]">
+          Agregar al carrito
+        </button>
+      ` : ""}
+
+      ${permitirCompra ? `
+        <button id="btnComprarAhora"
+          class="w-full bg-green-600 hover:bg-green-700 text-white
+                 py-3 rounded-xl font-semibold
+                 transition active:scale-[.99]">
+          Comprar ahora
+        </button>
+      ` : ""}
+
+      <p class="text-xs text-gray-500">
+        *Selecciona una presentación antes de continuar
+      </p>
+
+    </div>
+  `;
+    }
+
+    }
+  }
+
 
 function actualizarEnvio(precio) {
 
@@ -1209,7 +1319,7 @@ function actualizarEnvio(precio) {
 
         mensajeExtra.innerHTML = `
           Te faltan 
-          <strong class="text-green-600">$${faltan.toFixed(0)}</strong>
+          <strong class="text-green-600">$${formatearPrecio(faltan)}</strong>
           para envío gratis
           ${mensajeHorario}
         `;
@@ -1296,59 +1406,6 @@ Zona: Mérida (fuera de Caucel)
   }, 400);
 }
 
-
-
-
-window.seleccionarColor = color => {
-
-  window._colorSeleccionado = color;
-
-  const botones = document.querySelectorAll(".color-btn");
-  const label = document.getElementById("colorSeleccionadoLabel");
-
-  botones.forEach(b => {
-    b.classList.remove("ring-2","ring-blue-600","scale-110","border-blue-600");
-    b.classList.add("border-gray-300");
-  });
-
-  const btnActivo = document.querySelector(
-    `.color-btn[data-color="${color}"]`
-  );
-
-  if (btnActivo) {
-    btnActivo.classList.add(
-      "ring-2","ring-blue-600","scale-110","border-blue-600"
-    );
-    btnActivo.classList.remove("border-gray-300");
-  }
-
-  if (label) label.textContent = color;
-
-  // 🔹 Cambiar imagen
-  if (window._imagenesPorColor?.[color]) {
-    const img = document.getElementById("imgPrincipal");
-    if (img) {
-      img.style.opacity = "0";
-      setTimeout(() => {
-        img.src = window._imagenesPorColor[color];
-        img.style.opacity = "1";
-      }, 150);
-    }
-  }
-
-  // 🔹 Cambiar precio por color (si existe presentación por color)
-  const presPorColor = window._presentaciones
-    ?.find(p => p.color === color);
-
-  if (presPorColor) {
-    const precioEl = document.getElementById("precioProducto");
-    if (precioEl) {
-      precioEl.textContent = `$${presPorColor.precio}`;
-    }
-    actualizarEnvio(presPorColor.precio);
-  }
-};
-
     function activarCarrusel() {
       // Ya no usamos carrusel scroll.
       // Las miniaturas manejan la navegación.
@@ -1373,7 +1430,7 @@ window.seleccionarColor = color => {
   actualizarDots();
 }
 
-    window.irAImagen = index => {
+   window.irAImagen = index => {
 
       const imgs = window._productoActualImgs || [];
       const img = document.getElementById("imgPrincipal");
@@ -1396,9 +1453,7 @@ window.seleccionarColor = color => {
         activa.classList.add("border-yellow-400","ring-2","ring-yellow-400");
       }
 
-      abrirLightbox(index); // 👈 ESTA LÍNEA
     };
-
 /* =========================================================
    LIGHTBOX PRO
 ========================================================= */
@@ -1415,7 +1470,7 @@ window.abrirLightbox = index => {
   if (!lightbox || !img) return;
 
   lbIndex = index;
-  img.src = window._productoActualImgs[lbIndex];
+  img.src = optimizarImg(window._productoActualImgs[lbIndex]);
 
   actualizarContador();
 
@@ -1445,7 +1500,7 @@ function cambiarLightbox(dir) {
   if (img) {
     img.style.opacity = "0";
     setTimeout(() => {
-      img.src = imgs[lbIndex];
+      img.src = optimizarImg(imgs[lbIndex]);
       img.style.opacity = "1";
     }, 150);
   }
@@ -1634,19 +1689,237 @@ window.addEventListener("popstate", event => {
 
 });
 
-function activarSelectorPresentaciones() {
 
-  document.querySelectorAll(".variante").forEach(btn => {
+window._tallaSeleccionada = null;
 
-    btn.addEventListener("click", () => {
 
-      const id = btn.dataset.id;
-      if (!id) return;
+/* =========================================================
+   🔥 ACTUALIZAR UI VARIANTE
+========================================================= */
+function actualizarUI(variante) {
 
-      seleccionarPresentacion(id);
+  window._presentacionSeleccionada = variante;
+  window._colorSeleccionado = variante.color || window._colorSeleccionado || null;
+  window._tallaSeleccionada = variante.talla || window._tallaSeleccionada || null;
 
-    });
+  /* ===== PRECIO ===== */
 
+  const bloquePrecio = document.getElementById("bloquePrecio");
+
+  if (bloquePrecio) {
+
+    let precioNormal = variante.precio;
+    let precioOferta = variante.precio_oferta;
+    let enOferta = variante.en_oferta === true;
+
+    if (enOferta && precioOferta) {
+
+      const descuento = Math.round(
+        ((precioNormal - precioOferta) / precioNormal) * 100
+      );
+
+      bloquePrecio.innerHTML = `
+        <div class="space-y-1">
+          <div class="flex items-center gap-3">
+            <div class="text-3xl md:text-4xl font-extrabold text-green-700">
+              $${formatearPrecio(precioOferta)}
+            </div>
+            <span class="text-sm bg-red-600 text-white px-2 py-1 rounded">
+              -${descuento}%
+            </span>
+          </div>
+          <div class="text-sm text-gray-500 line-through">
+            $${formatearPrecio(precioNormal)}
+          </div>
+        </div>
+      `;
+
+    } else {
+
+      bloquePrecio.innerHTML = `
+        <div class="text-3xl md:text-4xl font-extrabold text-green-700">
+          $${formatearPrecio(precioNormal)}
+        </div>
+      `;
+    }
+  }
+
+  /* ===== NOMBRE ===== */
+
+ const nombreEls = document.querySelectorAll("#nombreProducto");
+
+if (nombreEls.length) {
+  const nombreBase = window._productoActual?.nombre || "";
+  const nombreVariante = obtenerNombreVariante(variante);
+
+  const textoFinal = nombreVariante
+    ? nombreVariante
+    : `${nombreBase}${variante.talla ? ` - ${variante.talla}` : ""}${variante.color ? ` - ${variante.color}` : ""}`;
+
+  nombreEls.forEach(el => (el.textContent = textoFinal));
+}
+
+  /* ===== IMAGEN ===== */
+
+  if (variante.imagen) {
+
+    const img = document.getElementById("imgPrincipal");
+
+    if (img) {
+      img.style.opacity = "0";
+
+      setTimeout(() => {
+        img.src = optimizarImg(variante.imagen);
+        img.style.opacity = "1";
+      }, 150);
+    }
+
+    window._productoActualImgs = [
+      variante.imagen,
+      ...window._productoImgsBase
+    ];
+  }
+
+  /* ===== ENVÍO ===== */
+
+  actualizarEnvio(variante.precio);
+
+  /* ===== DESCRIPCIÓN ===== */
+
+  const descResumen = document.getElementById("descResumenTab");
+  const descCompleta = document.getElementById("descCompletaTab");
+
+  if (descResumen && descCompleta) {
+
+    const texto =
+      variante.detalle || window._descripcionOriginal;
+
+    descResumen.innerHTML = formatearDescripcion(texto);
+    descCompleta.innerHTML = formatearDescripcion(texto);
+  }
+}
+
+
+window.seleccionarPresentacion = id => {
+
+  const variante = window._presentaciones.find(p => p.id === id);
+  if (!variante) return;
+
+  // reset color seleccionado si cambia la presentación
+  window._colorSeleccionado = variante.color || null;
+  window._tallaSeleccionada = variante.talla || null;
+
+  document.querySelectorAll(".btn-presentacion").forEach(b => {
+    b.classList.remove("bg-black","text-white","border-black");
+    b.classList.add("bg-white","border-gray-300");
   });
 
-}
+  const btn = document.querySelector(`[data-id="${id}"]`);
+  if (btn) btn.classList.add("bg-black","text-white","border-black");
+
+  actualizarUI(variante);
+};
+
+window.seleccionarGrupo = grupo => {
+
+  window._tallaSeleccionada = grupo;
+
+  const variantesGrupo = window._presentaciones.filter(p => p.talla === grupo);
+  if (!variantesGrupo.length) return;
+
+  document.querySelectorAll(".btn-grupo").forEach(b => {
+    b.classList.remove("bg-black","text-white","border-black");
+    b.classList.add("bg-white","border-gray-300");
+  });
+
+  const btn = document.querySelector(`[data-grupo="${grupo}"]`);
+  if (btn) btn.classList.add("bg-black","text-white","border-black");
+
+  const coloresUnicos = [...new Set(variantesGrupo.map(p => p.color).filter(Boolean))];
+  const bloqueColor = document.getElementById("bloqueColor");
+  if (!bloqueColor) return;
+
+  // ✅ Si NO hay colores, actualiza de inmediato con la primera variante del grupo
+  if (!coloresUnicos.length) {
+    const primera = variantesGrupo.find(v => (v.stock ?? 999999) > 0) || variantesGrupo[0];
+    window._colorSeleccionado = null;
+    actualizarUI(primera);
+    bloqueColor.innerHTML = "";
+    return;
+  }
+
+  // ✅ Si SÍ hay colores: pinta botones Y actualiza precio de inmediato con el primer color disponible
+  const primeraDisponible =
+    variantesGrupo.find(v => (v.stock ?? 999999) > 0) || variantesGrupo[0];
+
+  window._colorSeleccionado = primeraDisponible.color || null;
+  actualizarUI(primeraDisponible);
+
+  bloqueColor.innerHTML = `
+    <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
+      Color
+    </div>
+
+    <div class="flex gap-3 flex-wrap">
+      ${coloresUnicos.map(color => {
+        const variante = variantesGrupo.find(v => v.color === color);
+        const sinStock = (variante?.stock ?? 999999) <= 0;
+        const activa = (color === window._colorSeleccionado);
+
+        return `
+              <button
+                class="btn-color w-7 h-7 rounded-full border
+                  ${activa ? "ring-2 ring-black border-black" : "border-gray-300"}"
+                data-color="${String(color).replace(/"/g,'&quot;')}"
+                ${sinStock ? "disabled" : ""}
+                onclick='seleccionarColor(${JSON.stringify(grupo)}, ${JSON.stringify(color)})'
+                style="background-color:${normalizarColor(color)}; opacity:${sinStock ? 0.35 : 1}; ${sinStock ? "cursor:not-allowed;" : ""}">
+              </button>
+            `;
+      }).join("")}
+    </div>
+  `;
+};
+
+// ✅ Flexible: (color) o (grupo,color)
+window.seleccionarColor = (a, b) => {
+
+  let grupo = null;
+  let color = null;
+
+  if (typeof b === "undefined") {
+    // SOLO COLOR
+    color = a;
+  } else {
+    // TALLA + COLOR
+    grupo = a;
+    color = b;
+  }
+
+  let variante = null;
+
+  if (grupo) {
+    variante = window._presentaciones.find(p => p.talla === grupo && p.color === color);
+  } else {
+    variante = window._presentaciones.find(p => p.color === color);
+  }
+
+  if (!variante) return;
+
+  window._colorSeleccionado = color;
+
+  // UI: marcar activo el botón de color
+  document.querySelectorAll(".btn-color").forEach(btn => {
+    btn.classList.remove("ring-2","ring-black","border-black");
+    btn.classList.add("border-gray-300");
+  });
+
+  const activo = [...document.querySelectorAll(".btn-color")]
+  .find(b => (b.dataset.color || "") === String(color));
+  if (activo) {
+    activo.classList.add("ring-2","ring-black","border-black");
+    activo.classList.remove("border-gray-300");
+  }
+
+  actualizarUI(variante);
+};

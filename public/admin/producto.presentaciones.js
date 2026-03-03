@@ -22,13 +22,16 @@ export function crearPresentacionBase() {
     stock: 0,
     activo: true,
     sku: "",
-    detalle: ""
+    detalle: "",
+    imagen: "",
+    imagenPreview: "",
+    fileImagen: null,
+    color: ""
   };
 }
 
-/* =========================================================
-   🔧 CÁLCULO DE MARGEN (SE MANTIENE IGUAL)
-========================================================= */
+/* ================= MARGEN ================= */
+
 function calcularMargen(p) {
   const costo = Number(p.costo);
   const precio = Number(p.precio);
@@ -40,9 +43,8 @@ function calcularMargen(p) {
   }
 }
 
-/* =========================================================
-   🎨 RENDER PRINCIPAL
-========================================================= */
+/* ================= RENDER ================= */
+
 export function renderPresentaciones(container) {
 
   container.innerHTML = "";
@@ -51,7 +53,6 @@ export function renderPresentaciones(container) {
     container.innerHTML = `
       <div class="text-sm text-slate-400 italic">
         Este producto aún no tiene presentaciones.
-        Agrega al menos una para poder venderlo.
       </div>
     `;
     return;
@@ -63,31 +64,65 @@ export function renderPresentaciones(container) {
   });
 }
 
-/* =========================================================
-   🧩 COMPONENTE PRESENTACIÓN
-========================================================= */
+/* ================= CARD ================= */
+
 function crearCardPresentacion(p, i, container) {
 
   const card = document.createElement("div");
-  card.className = "border rounded p-4 space-y-2 bg-gray-50";
+  card.className = "border rounded p-4 space-y-3 bg-gray-50";
 
-  /* ================= NOMBRE ================= */
+  if (p.color) {
+    card.style.borderColor = p.color;
+  }
+
+  /* ===== NOMBRE ===== */
+
   const inputNombre = crearInput("text", "input",
     "Nombre (Collar, Bulto 20kg)", p.nombre);
+
   inputNombre.addEventListener("input", e => {
     p.nombre = e.target.value;
   });
+
   card.appendChild(inputNombre);
 
-  /* ================= DETALLE ================= */
+  /* ===== DETALLE ===== */
+
   const inputDetalle = crearInput("text", "input text-sm",
     "Detalle corto (opcional)", p.detalle || "");
+
   inputDetalle.addEventListener("input", e => {
     p.detalle = e.target.value;
   });
+
   card.appendChild(inputDetalle);
 
-  /* ================= UNIDAD + TALLA ================= */
+  /* ===== COLOR ===== */
+
+  const divColor = document.createElement("div");
+  divColor.className = "flex items-center gap-3";
+
+  const labelColor = document.createElement("span");
+  labelColor.className = "text-sm text-slate-600";
+  labelColor.textContent = "Color:";
+
+  const inputColor = document.createElement("input");
+  inputColor.type = "color";
+  inputColor.value = p.color || "#000000";
+  inputColor.className = "w-10 h-10 rounded border cursor-pointer";
+
+  inputColor.addEventListener("input", e => {
+    p.color = e.target.value;
+    card.style.borderColor = p.color;
+  });
+
+  divColor.appendChild(labelColor);
+  divColor.appendChild(inputColor);
+
+  card.appendChild(divColor);
+
+  /* ===== UNIDAD + TALLA ===== */
+
   const gridVariante = document.createElement("div");
   gridVariante.className = "grid grid-cols-2 gap-2";
 
@@ -108,15 +143,18 @@ function crearCardPresentacion(p, i, container) {
 
   const inputTalla = crearInput("text", "input",
     "Variante / Tamaño", p.talla);
+
   inputTalla.addEventListener("input", e => {
     p.talla = e.target.value;
   });
 
   gridVariante.appendChild(selectUnidad);
   gridVariante.appendChild(inputTalla);
+
   card.appendChild(gridVariante);
 
-  /* ================= COSTO / PRECIO ================= */
+  /* ===== COSTO / PRECIO ===== */
+
   const gridPrecios = document.createElement("div");
   gridPrecios.className = "grid grid-cols-2 gap-2";
 
@@ -127,21 +165,16 @@ function crearCardPresentacion(p, i, container) {
   gridPrecios.appendChild(inputPrecio);
   card.appendChild(gridPrecios);
 
-  /* ================= MARGEN ================= */
   const infoMargen = document.createElement("div");
   infoMargen.className = "text-xs text-gray-600";
 
   function actualizarMargenUI() {
     calcularMargen(p);
-
-    const ganancia =
-      (Number(p.precio) - Number(p.costo)) || 0;
+    const ganancia = (Number(p.precio) - Number(p.costo)) || 0;
 
     infoMargen.innerHTML = `
-      Ganancia:
-      <b>$${ganancia}</b> |
-      Margen:
-      <b>${p.margen}%</b>
+      Ganancia: <b>$${ganancia}</b> |
+      Margen: <b>${p.margen}%</b>
     `;
   }
 
@@ -158,71 +191,125 @@ function crearCardPresentacion(p, i, container) {
   actualizarMargenUI();
   card.appendChild(infoMargen);
 
-  /* ================= OFERTA ================= */
-  const divOferta = document.createElement("div");
-  divOferta.className = "flex items-center gap-2 text-sm";
+  /* ===== IMAGEN ===== */
 
-  const chkOferta = document.createElement("input");
-  chkOferta.type = "checkbox";
-  chkOferta.checked = p.en_oferta;
 
-  const spanOferta = document.createElement("span");
-  spanOferta.textContent = "En oferta";
+const divImagen = document.createElement("div");
+divImagen.className = "mt-3";
 
-  divOferta.appendChild(chkOferta);
-  divOferta.appendChild(spanOferta);
-  card.appendChild(divOferta);
+const labelImg = document.createElement("div");
+labelImg.className = "text-xs font-semibold text-slate-600 mb-2";
+labelImg.textContent = "Imagen (1 clic pegar • doble clic subir)";
 
-  const inputOferta = crearInput("number", "input",
-    "Precio oferta", p.precio_oferta);
-  inputOferta.style.display = p.en_oferta ? "block" : "none";
+const previewBox = document.createElement("div");
+previewBox.className =
+  "w-28 h-28 border-2 border-dashed rounded-xl bg-slate-100 flex items-center justify-center cursor-pointer hover:border-fuchsia-400 transition";
+previewBox.tabIndex = 0;
 
-  chkOferta.addEventListener("change", e => {
-    p.en_oferta = e.target.checked;
-    inputOferta.style.display =
-      p.en_oferta ? "block" : "none";
-  });
+const inputFile = document.createElement("input");
+inputFile.type = "file";
+inputFile.accept = "image/*";
+inputFile.hidden = true;
 
-  inputOferta.addEventListener("input", e => {
-    p.precio_oferta =
-      e.target.value === "" ? "" : Number(e.target.value);
-  });
+/* 🔹 Función estable para actualizar solo preview */
+function actualizarPreview(src) {
+  previewBox.innerHTML = "";
 
-  card.appendChild(inputOferta);
+  if (src) {
+    const img = document.createElement("img");
+    img.src = src;
+    img.className = "w-full h-full object-cover rounded-xl";
+    previewBox.appendChild(img);
+  } else {
+    previewBox.innerHTML =
+      '<span class="text-xs text-slate-400">Sin imagen</span>';
+  }
+}
 
-  /* ================= STOCK + ACTIVO ================= */
-  const gridStock = document.createElement("div");
-  gridStock.className = "grid grid-cols-2 gap-2";
+/* Inicial */
+actualizarPreview(p.imagenPreview || p.imagen);
 
-  const inputStock = crearInput("number", "input", "Stock", p.stock);
-  inputStock.addEventListener("input", e => {
-    p.stock = Number(e.target.value) || 0;
-  });
+/* 🔹 1 clic → enfocar para pegar */
+previewBox.addEventListener("click", () => {
+  previewBox.focus();
+});
 
-  const divActivo = document.createElement("div");
-  divActivo.className = "flex items-center gap-2 text-sm";
+/* 🔹 Doble clic → abrir explorador */
+previewBox.addEventListener("dblclick", () => {
+  inputFile.click();
+});
 
-  const chkActivo = document.createElement("input");
-  chkActivo.type = "checkbox";
-  chkActivo.checked = p.activo;
-  chkActivo.addEventListener("change", e => {
-    p.activo = e.target.checked;
-  });
+/* 🔹 Subir archivo */
+inputFile.addEventListener("change", e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-  const spanActivo = document.createElement("span");
-  spanActivo.textContent = "Activa";
+  const reader = new FileReader();
+  reader.onload = () => {
+    p.imagenPreview = reader.result;
+    p.fileImagen = file;
+    actualizarPreview(reader.result); // 🔥 SOLO actualiza preview
+  };
+  reader.readAsDataURL(file);
+});
 
-  divActivo.appendChild(chkActivo);
-  divActivo.appendChild(spanActivo);
+/* 🔹 Pegar imagen */
+previewBox.addEventListener("paste", e => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
 
-  gridStock.appendChild(inputStock);
-  gridStock.appendChild(divActivo);
-  card.appendChild(gridStock);
+  for (let item of items) {
+    if (item.type.startsWith("image")) {
+      const file = item.getAsFile();
+      if (!file) continue;
 
-  /* ================= ELIMINAR ================= */
+      const reader = new FileReader();
+      reader.onload = () => {
+        p.imagenPreview = reader.result;
+        p.fileImagen = file;
+        actualizarPreview(reader.result); // 🔥 SOLO preview
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+});
+
+/* 🔹 Drag & Drop */
+previewBox.addEventListener("dragover", e => {
+  e.preventDefault();
+  previewBox.classList.add("border-fuchsia-400");
+});
+
+previewBox.addEventListener("dragleave", () => {
+  previewBox.classList.remove("border-fuchsia-400");
+});
+
+previewBox.addEventListener("drop", e => {
+  e.preventDefault();
+  previewBox.classList.remove("border-fuchsia-400");
+
+  const file = e.dataTransfer.files?.[0];
+  if (!file || !file.type.startsWith("image")) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    p.imagenPreview = reader.result;
+    p.fileImagen = file;
+    actualizarPreview(reader.result); // 🔥 SOLO preview
+  };
+  reader.readAsDataURL(file);
+});
+
+divImagen.appendChild(labelImg);
+divImagen.appendChild(previewBox);
+divImagen.appendChild(inputFile);
+card.appendChild(divImagen);
+
+  /* ===== ELIMINAR ===== */
+
   const btnEliminar = document.createElement("button");
   btnEliminar.textContent = "Eliminar";
-  btnEliminar.className = "text-red-600 text-sm";
+  btnEliminar.className = "text-red-600 text-sm hover:underline";
 
   btnEliminar.addEventListener("click", () => {
     presentaciones.splice(i, 1);
@@ -234,9 +321,8 @@ function crearCardPresentacion(p, i, container) {
   return card;
 }
 
-/* =========================================================
-   🛠 HELPER INPUT
-========================================================= */
+/* ================= HELPER ================= */
+
 function crearInput(type, className, placeholder, value) {
   const input = document.createElement("input");
   input.type = type;
