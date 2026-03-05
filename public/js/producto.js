@@ -10,6 +10,8 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { abrirCarrito } from "./carrito.js";
+import { initUpsell } from "./upsell.js";
+
 
 document.addEventListener("DOMContentLoaded", () => {
   document
@@ -42,6 +44,23 @@ function safeAttr(val = "") {
 }
 
 function normalizarColor(c) {
+  // 1) Si viene como arreglo real: ["#783e17"]
+  if (Array.isArray(c)) c = c[0];
+
+  // 2) Si viene como string JSON: '["#783e17"]'
+  if (typeof c === "string") {
+    const s = c.trim();
+
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const arr = JSON.parse(s);
+        if (Array.isArray(arr) && arr.length) c = arr[0];
+      } catch (_) {
+        // si no parsea, seguimos normal
+      }
+    }
+  }
+
   const v = String(c || "").trim().toLowerCase();
 
   const mapa = {
@@ -60,10 +79,16 @@ function normalizarColor(c) {
     café: "#92400e"
   };
 
+  // ✅ hex directo
   if (/^#([0-9a-f]{3}){1,2}$/i.test(v)) return v;
+
+  // ✅ nombre conocido
   if (mapa[v]) return mapa[v];
+
+  // ✅ rgb/hsl
   if (/^(rgb|hsl)a?\(/i.test(v)) return v;
 
+  // fallback
   return "#9ca3af";
 }
 
@@ -83,12 +108,93 @@ function obtenerNombreVariante(variante) {
   return "";
 }
 
+// ✅ 1) Tu diccionario (empieza con los que uses más)
+const HEX_A_NOMBRE = {
+  "#134243": "Verde petróleo",
+  // "#ff0000": "Rojo",
+  // ...
+};
+
+function hexToRgb(hex) {
+  const h = (hex || "").replace("#", "").trim();
+  if (h.length === 3) {
+    const r = parseInt(h[0] + h[0], 16);
+    const g = parseInt(h[1] + h[1], 16);
+    const b = parseInt(h[2] + h[2], 16);
+    return { r, g, b };
+  }
+  if (h.length !== 6) return null;
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+}
+
+function rgbToHsl({ r, g, b }) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  const d = max - min;
+
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    switch (max) {
+      case r: h = ((g - b) / d) % 6; break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s, l };
+}
+
+// ✅ Nombre “genérico” por Hue + saturación + luz
+function nombreGenericoDesdeHex(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+
+  const { h, s, l } = rgbToHsl(rgb);
+
+  // grisáceos
+  if (s < 0.12) {
+    if (l < 0.18) return "Negro";
+    if (l < 0.35) return "Gris oscuro";
+    if (l < 0.7)  return "Gris";
+    return "Blanco";
+  }
+
+  let base = "Color";
+  if (h < 15 || h >= 345) base = "Rojo";
+  else if (h < 45) base = "Naranja";
+  else if (h < 70) base = "Amarillo";
+  else if (h < 160) base = "Verde";
+  else if (h < 200) base = "Turquesa";
+  else if (h < 255) base = "Azul";
+  else if (h < 290) base = "Morado";
+  else if (h < 345) base = "Rosa";
+
+  const tono =
+    l < 0.30 ? "oscuro" :
+    l > 0.75 ? "claro" : "";
+
+  return tono ? `${base} ${tono}` : base;
+}
+
+// ✅ función final: primero diccionario, si no, genérico
+function nombreColorDesdeHex(hex) {
+  const key = normalizarColor(hex).toLowerCase();
+  if (HEX_A_NOMBRE[key]) return HEX_A_NOMBRE[key];
+  return nombreGenericoDesdeHex(key);
+}
 /* =========================================================
    🧱 LAYOUT BASE GLOBAL (NO SE BORRA)
 ========================================================= */
 const LAYOUT_BASE = [
   { componente: "image", zona: "left", orden: 1 },
-
+  { componente: "comboBanner", zona: "left", orden: 2 },
   { componente: "brand", zona: "right", orden: 1 },
   { componente: "name", zona: "right", orden: 2 },
   { componente: "category", zona: "right", orden: 3 },  
@@ -97,11 +203,16 @@ const LAYOUT_BASE = [
   { componente: "price", zona: "right", orden: 5 },     
   { componente: "variant", zona: "right", orden: 6 },   
   { componente: "envio", zona: "right", orden: 7 },      
-  { componente: "buttons", zona: "right", orden: 8 },    
+  { componente: "buttons", zona: "right", orden: 8 }, 
+  { componente: "upsell", zona: "right", orden: 9 },   
 ];
 /* =========================================================
    🔐 DETECTAR ADMIN (NO BLOQUEANTE)
 ========================================================= */
+
+
+const MANEJA_STOCK = false;
+
 let ES_ADMIN = false;
 window.ES_ADMIN = false;
 
@@ -225,8 +336,7 @@ window._productoImgsBase = [...imgs];
     console.log("🔎 Ejemplo presentacion:", window._presentaciones?.[0]);
     if (window._presentaciones.length) {
 
-  const primeraDisponible =
-    window._presentaciones.find(p => p.stock > 0);
+  const primeraDisponible = window._presentaciones.find(p => p.talla) || window._presentaciones[0];
 
   if (primeraDisponible) {
     window._tallaSeleccionada = primeraDisponible.talla;
@@ -290,7 +400,7 @@ cont.innerHTML = `
             </div>
 
             <!-- CONTENIDO -->
-            <div class="p-8">
+            <div class="p-4 md:p-8">
 
 
         <!-- ================= DESCRIPCIÓN ================= -->
@@ -341,12 +451,13 @@ cont.innerHTML = `
                     : texto;
 
                 return `
-                  <div class="max-w-4xl mx-auto space-y-3 md:space-y-4 px-1 md:px-0">
+                  <div class="w-full md:max-w-4xl md:mx-auto space-y-3 md:space-y-4 px-0">
 
                     <div id="descResumenTab"
                         class="text-sm md:text-[15px] leading-6 md:leading-7 
-                                text-gray-700 line-clamp-5">
-                      ${formatear(resumenTexto)}
+                                text-gray-700 line-clamp-6 md:line-clamp-none
+                                w-full">
+                      ${escaparHTML(resumenTexto).replace(/\n/g, "<br>")}
                     </div>
 
                     <div id="descCompletaTab" class="hidden">
@@ -354,16 +465,21 @@ cont.innerHTML = `
                     </div>
 
                     ${
-                      texto.length > 450
-                        ? `
-                        <div class="mt-6 text-center">
-                          <button id="btnAbrirDetalle"
-                            class="text-blue-600 font-semibold mt-3">
-                            Ver detalle
-                          </button>
-                        </div>
-                        `
-                        : ""
+                      (() => {
+                        const lineas = (texto || "").split("\n").filter(x => x.trim() !== "");
+                        const debeMostrar =
+                          (texto || "").trim().length > 180 ||   
+                          lineas.length >= 3;                   
+
+                        return debeMostrar ? `
+                          <div class="mt-6 text-center">
+                            <button id="btnAbrirDetalle"
+                              class="text-blue-600 font-semibold mt-3">
+                              Ver detalle
+                            </button>
+                          </div>
+                        ` : "";
+                      })()
                     }
 
                   </div>
@@ -417,7 +533,7 @@ setTimeout(() => {
   const pres = window._presentaciones || [];
   if (!pres.length) return;
 
-  const primera = pres.find(v => (v.stock ?? 999999) > 0) || pres[0];
+  const primera = pres.find(v => v.color || v.talla) || pres[0];
   if (!primera) return;
 
   // si hay talla, selecciona el grupo (esto ya elige color disponible y actualiza UI)
@@ -446,6 +562,10 @@ setTimeout(() => {
 actualizarEnvio(
   window._presentacionSeleccionada?.precio || ctx.p.precio
 );
+
+setTimeout(() => {
+  initUpsell(p);
+}, 0);
 
 
 // 🔥 ACTIVAR ADMIN (UNA SOLA VEZ)
@@ -667,20 +787,20 @@ function activarBotones(p, imgBase) {
       return;
     }
 
-    const producto = {
-      id: p.id,
-      presentacion_id: window._presentacionSeleccionada.id,
-      nombre: p.nombre,
-      precio: window._presentacionSeleccionada.precio,
-      imagen:
-      window._presentacionSeleccionada?.imagen
-        ? window._presentacionSeleccionada.imagen
-        : document.getElementById("imgPrincipal")?.src,
-      presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
-      color: window._colorSeleccionado || null,
-      cantidad: 1
-    };
+ const pres = window._presentacionSeleccionada;
 
+const nombrePresentacion =
+  (obtenerNombreVariante(pres) || pres?.nombre || pres?.talla || "").trim();
+
+const producto = {
+  id: p.id,
+  presentacion_id: pres?.id || null,
+  nombre: p.nombre, // aquí ya te llegará el nombre con color si tú lo guardas así
+  precio: pres?.precio ?? p.precio,
+  imagen: pres?.imagen ? pres.imagen : document.getElementById("imgPrincipal")?.src,
+  presentacion: nombrePresentacion || null,
+  cantidad: 1
+};
     // 🟦 AGREGAR AL CARRITO NORMAL
     if (btnAgregar) {
       agregarAlCarrito(producto);
@@ -690,19 +810,22 @@ function activarBotones(p, imgBase) {
     // 🟩 COMPRA DIRECTA
     if (btnComprar) {
 
-        const productoCompra = {
-          id: p.id,
-          presentacion_id: window._presentacionSeleccionada.id,
-          nombre: p.nombre,
-          precio: window._presentacionSeleccionada.precio,
-          imagen:
-            window._presentacionSeleccionada?.imagen
-              ? window._presentacionSeleccionada.imagen
-              : document.getElementById("imgPrincipal")?.src,
-          presentacion: `${window._presentacionSeleccionada.cantidad || ""} ${window._presentacionSeleccionada.unidad || ""}`,
-          color: window._colorSeleccionado || null,
-          cantidad: 1
-        };  
+        const pres = window._presentacionSeleccionada;
+
+const nombrePresentacion =
+  (obtenerNombreVariante(pres) || pres?.nombre || pres?.talla || "").trim();
+
+
+
+const productoCompra = {
+  id: p.id,
+  presentacion_id: pres?.id || null,
+  nombre: p.nombre,
+  precio: pres?.precio ?? p.precio,
+  imagen: pres?.imagen ? pres.imagen : document.getElementById("imgPrincipal")?.src,
+  presentacion: nombrePresentacion || null,
+  cantidad: 1
+};
 
 
         // Ejecutar flujo directo pasando el producto
@@ -885,6 +1008,13 @@ function renderComponente(b, ctx) {
     /* ================= IMAGEN ================= */
     case "image":
       return renderGaleria(ctx.imgs);
+
+      case "comboBanner":
+        return `
+          <div class="pt-2">
+            <div id="comboBox"></div>
+          </div>
+        `;
 
     /* ================= MARCA ================= */
       case "brand": {
@@ -1088,21 +1218,25 @@ case "envio":
         <div class="flex gap-3 flex-wrap">
           ${coloresUnicos.map(color => {
             const variante = ctx.presentaciones.find(v => v.color === color);
-            const sinStock = (variante?.stock ?? 999999) <= 0;
-            const activa   = String(color) === String(window._colorSeleccionado);
+            const sinStock = MANEJA_STOCK ? (Number(variante?.stock ?? 0) <= 0) : false;
+            const activa = normalizarColor(color) === (window._colorSeleccionadoHex || "");
 
             return `
               <button
                 class="btn-color w-7 h-7 rounded-full border
-                  ${activa ? "ring-2 ring-black border-black" : "border-gray-300"}"
-                data-color="${String(color).replace(/"/g,'&quot;')}"
+                  ${activa ? "ring-2 ring-white ring-offset-2 ring-offset-gray-700 border-gray-300" : "border-gray-300"}"
+                data-color="${normalizarColor(color)}"
                 ${sinStock ? "disabled" : ""}
                 onclick='seleccionarColor(${JSON.stringify(color)})'
-                style="
-                  background-color:${normalizarColor(color)};
-                  opacity:${sinStock ? 0.35 : 1};
-                  ${sinStock ? "cursor:not-allowed;" : "cursor:pointer;"}
-                ">
+               style="
+                background:${normalizarColor(color)} !important;
+                background-image:none !important;
+                filter:none !important;
+                opacity:1 !important;
+                -webkit-appearance:none;
+                appearance:none;
+                cursor:pointer;
+              ">
               </button>
             `;
           }).join("")}
@@ -1161,18 +1295,18 @@ case "buttons": {
 
       ${permitirCarrito ? `
         <button id="btnAgregar"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white
-                 py-3 rounded-xl font-semibold
-                 transition active:scale-[.99]">
+          class="w-full bg-black hover:bg-neutral-900 text-white
+          py-3 rounded-xl font-semibold
+          transition active:scale-[.99]">
           Agregar al carrito
         </button>
       ` : ""}
 
       ${permitirCompra ? `
         <button id="btnComprarAhora"
-          class="w-full bg-green-600 hover:bg-green-700 text-white
-                 py-3 rounded-xl font-semibold
-                 transition active:scale-[.99]">
+          class="w-full bg-black hover:bg-neutral-900 text-white
+            py-3 rounded-xl font-semibold
+            transition active:scale-[.99]">
           Comprar ahora
         </button>
       ` : ""}
@@ -1185,7 +1319,16 @@ case "buttons": {
   `;
     }
 
+    case "upsell":
+  return `
+    <div class="pt-2">
+      <div id="upsellBox"></div>
+    </div>
+  `;
+
     }
+
+    
   }
 
 
@@ -1699,7 +1842,16 @@ window._tallaSeleccionada = null;
 function actualizarUI(variante) {
 
   window._presentacionSeleccionada = variante;
-  window._colorSeleccionado = variante.color || window._colorSeleccionado || null;
+
+  // ✅ Guardar el COLOR como TEXTO (lo que eligió el cliente)
+  window._colorSeleccionadoLabel = variante.color || window._colorSeleccionadoLabel || null;
+
+  // ✅ Guardar el HEX solo para UI (pintar bolita)
+  window._colorSeleccionadoHex = window._colorSeleccionadoLabel
+    ? normalizarColor(window._colorSeleccionadoLabel)
+    : null;
+
+  // ✅ Talla / grupo
   window._tallaSeleccionada = variante.talla || window._tallaSeleccionada || null;
 
   /* ===== PRECIO ===== */
@@ -1806,8 +1958,8 @@ window.seleccionarPresentacion = id => {
   if (!variante) return;
 
   // reset color seleccionado si cambia la presentación
-  window._colorSeleccionado = variante.color || null;
-  window._tallaSeleccionada = variante.talla || null;
+  window._colorSeleccionadoLabel = variante.color || null;
+  window._colorSeleccionadoHex = window._colorSeleccionadoLabel ? normalizarColor(window._colorSeleccionadoLabel) : null;
 
   document.querySelectorAll(".btn-presentacion").forEach(b => {
     b.classList.remove("bg-black","text-white","border-black");
@@ -1824,64 +1976,86 @@ window.seleccionarGrupo = grupo => {
 
   window._tallaSeleccionada = grupo;
 
-  const variantesGrupo = window._presentaciones.filter(p => p.talla === grupo);
+  const variantesGrupo = (window._presentaciones || []).filter(p =>
+    String(p.talla || "") === String(grupo || "")
+  );
   if (!variantesGrupo.length) return;
 
+  // UI: marcar talla activa
   document.querySelectorAll(".btn-grupo").forEach(b => {
     b.classList.remove("bg-black","text-white","border-black");
     b.classList.add("bg-white","border-gray-300");
   });
 
-  const btn = document.querySelector(`[data-grupo="${grupo}"]`);
+  const btn = document.querySelector(`[data-grupo="${String(grupo).replace(/"/g,'&quot;')}"]`);
   if (btn) btn.classList.add("bg-black","text-white","border-black");
 
-  const coloresUnicos = [...new Set(variantesGrupo.map(p => p.color).filter(Boolean))];
   const bloqueColor = document.getElementById("bloqueColor");
   if (!bloqueColor) return;
 
-  // ✅ Si NO hay colores, actualiza de inmediato con la primera variante del grupo
+  // ✅ Colores únicos NORMALIZADOS (hex)
+  const coloresUnicos = [
+    ...new Set(
+      variantesGrupo
+        .map(v => normalizarColor(v.color))
+        .filter(c => c && c !== "#9ca3af") // opcional: evita “gris fallback” si viniera basura
+    )
+  ];
+
+  // ✅ Si esa talla NO tiene colores, selecciona la primera variante y oculta bloqueColor
   if (!coloresUnicos.length) {
-    const primera = variantesGrupo.find(v => (v.stock ?? 999999) > 0) || variantesGrupo[0];
     window._colorSeleccionado = null;
-    actualizarUI(primera);
+    actualizarUI(variantesGrupo[0]);
     bloqueColor.innerHTML = "";
     return;
   }
 
-  // ✅ Si SÍ hay colores: pinta botones Y actualiza precio de inmediato con el primer color disponible
-  const primeraDisponible =
-    variantesGrupo.find(v => (v.stock ?? 999999) > 0) || variantesGrupo[0];
+  // ✅ Autoselección: si ya hay color seleccionado, úsalo; si no, usa el primero
+    const seleccionado =
+      window._colorSeleccionadoHex && window._colorSeleccionadoHex !== "#9ca3af"
+        ? window._colorSeleccionadoHex
+        : coloresUnicos[0];
 
-  window._colorSeleccionado = primeraDisponible.color || null;
-  actualizarUI(primeraDisponible);
+    const varianteElegida =
+      variantesGrupo.find(v => normalizarColor(v.color) === seleccionado) || variantesGrupo[0];
 
+    window._colorSeleccionadoLabel = varianteElegida.color || null;
+    window._colorSeleccionadoHex = window._colorSeleccionadoLabel ? normalizarColor(window._colorSeleccionadoLabel) : null;
+
+    actualizarUI(varianteElegida);
+
+  // Pintar botones de color
   bloqueColor.innerHTML = `
     <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">
       Color
     </div>
 
     <div class="flex gap-3 flex-wrap">
-      ${coloresUnicos.map(color => {
-        const variante = variantesGrupo.find(v => v.color === color);
-        const sinStock = (variante?.stock ?? 999999) <= 0;
-        const activa = (color === window._colorSeleccionado);
+      ${coloresUnicos.map(colorHex => {
+        const activa = normalizarColor(colorHex) === (window._colorSeleccionadoHex || "");
 
         return `
-              <button
-                class="btn-color w-7 h-7 rounded-full border
-                  ${activa ? "ring-2 ring-black border-black" : "border-gray-300"}"
-                data-color="${String(color).replace(/"/g,'&quot;')}"
-                ${sinStock ? "disabled" : ""}
-                onclick='seleccionarColor(${JSON.stringify(grupo)}, ${JSON.stringify(color)})'
-                style="background-color:${normalizarColor(color)}; opacity:${sinStock ? 0.35 : 1}; ${sinStock ? "cursor:not-allowed;" : ""}">
-              </button>
-            `;
+          <button
+            class="btn-color w-7 h-7 rounded-full border border-gray-300
+              ${activa ? "ring-2 ring-white ring-offset-2 ring-offset-gray-700" : ""}"
+            data-color="${colorHex}"
+            onclick='seleccionarColor(${JSON.stringify(grupo)}, ${JSON.stringify(colorHex)})'
+            style="
+              background:${colorHex} !important;
+              background-image:none !important;
+              filter:none !important;
+              opacity:1 !important;
+              -webkit-appearance:none;
+              appearance:none;
+              cursor:pointer;
+            ">
+          </button>
+        `;
       }).join("")}
     </div>
   `;
 };
 
-// ✅ Flexible: (color) o (grupo,color)
 window.seleccionarColor = (a, b) => {
 
   let grupo = null;
@@ -1896,30 +2070,40 @@ window.seleccionarColor = (a, b) => {
     color = b;
   }
 
+  const colorNorm = normalizarColor(color);
+
   let variante = null;
 
   if (grupo) {
-    variante = window._presentaciones.find(p => p.talla === grupo && p.color === color);
+    variante = (window._presentaciones || []).find(p =>
+      String(p.talla || "") === String(grupo || "") &&
+      normalizarColor(p.color) === colorNorm
+    );
   } else {
-    variante = window._presentaciones.find(p => p.color === color);
+    variante = (window._presentaciones || []).find(p =>
+      normalizarColor(p.color) === colorNorm
+    );
   }
 
   if (!variante) return;
 
-  window._colorSeleccionado = color;
+  window._colorSeleccionadoHex = colorNorm;
+  window._colorSeleccionadoLabel = variante.color || null;
+  window._colorSeleccionado = colorNorm;
 
-  // UI: marcar activo el botón de color
+  // UI: limpiar todos
   document.querySelectorAll(".btn-color").forEach(btn => {
-    btn.classList.remove("ring-2","ring-black","border-black");
-    btn.classList.add("border-gray-300");
+    btn.classList.remove("ring-2","ring-white","ring-offset-2","ring-offset-gray-700");
   });
 
-  const activo = [...document.querySelectorAll(".btn-color")]
-  .find(b => (b.dataset.color || "") === String(color));
-  if (activo) {
-    activo.classList.add("ring-2","ring-black","border-black");
-    activo.classList.remove("border-gray-300");
+  // UI: activar el correcto (usa data-color normalizado)
+  const btnActivo = [...document.querySelectorAll(".btn-color")]
+    .find(el => (el.dataset.color || "") === colorNorm);
+
+  if (btnActivo) {
+    btnActivo.classList.add("ring-2","ring-white","ring-offset-2","ring-offset-gray-700");
   }
 
+ 
   actualizarUI(variante);
 };

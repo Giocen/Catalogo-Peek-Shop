@@ -96,32 +96,28 @@ export function abrirCarrito() {
  window.abrirCarrito = abrirCarrito;
 
 /* ================= AGREGAR ================= */
-  export function agregarAlCarrito(producto) {
+export function agregarAlCarrito(producto) {
 
-    producto.presentacion_id = producto.presentacion_id || null;
-    producto.color = producto.color || null;
+  producto.presentacion_id = producto.presentacion_id || null;
 
+  const carrito = getCarrito();
 
-    const carrito = getCarrito();
-    const p = carrito.find(i =>
-      i.id === producto.id &&
-      i.presentacion_id === producto.presentacion_id &&
-      i.color === producto.color
-    );
+  const p = carrito.find(i =>
+    i.id === producto.id &&
+    i.presentacion_id === producto.presentacion_id
+  );
 
-
-    if (p) {
-      p.cantidad++;
-    } else {
-      carrito.push({ ...producto, cantidad: 1 });
-    }
-
-    setCarrito(carrito);
-    guardar();
-    animarCarritoIcon();
-    toast("Agregado al carrito 🛒");
-    
+  if (p) {
+    p.cantidad++;
+  } else {
+    carrito.push({ ...producto, cantidad: 1 });
   }
+
+  setCarrito(carrito);
+  guardar();
+  animarCarritoIcon();
+  toast("Agregado al carrito 🛒");
+}
 
 
 /* ================= RENDER PORTAL ================= */
@@ -221,7 +217,7 @@ function renderPortal() {
                     : `
                       <div class="shipping-progress">
                         <div class="shipping-text">
-                          Te faltan <strong>$${faltan > 0 ? faltan : 0}</strong>
+                          Te faltan <strong>$${formatearPrecio(faltan > 0 ? faltan : 0)}</strong>
                           para envío gratis
                         </div>
                         <div class="progress-bar">
@@ -354,15 +350,22 @@ function renderItems() {
 
         <img src="${p.imagen || ''}" class="cart-item-img">
 
-        <div class="cart-item-info">
+       <div class="cart-item-info">
           <div class="cart-item-name">${p.nombre}</div>
+
+          ${p.presentacion ? `
+            <div style="font-size:12px;color:#64748b;margin-top:2px">
+              Presentación: <b>${p.presentacion}</b>
+            </div>
+          ` : ""}
+
           <div class="cart-item-price">$${formatearPrecio(precio)}</div>
 
           <div class="cart-qty">
 
             <button 
               class="qty-btn qty-minus"
-              onclick="event.stopPropagation();_cartMinus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})">
+              onclick="event.stopPropagation(); _cartMinus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'})">
               <i data-lucide="minus"></i>
             </button>
 
@@ -372,7 +375,7 @@ function renderItems() {
 
             <button 
               class="qty-btn qty-plus"
-              onclick="event.stopPropagation(); _cartPlus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})">
+              onclick="event.stopPropagation(); _cartPlus('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'})">
               <i data-lucide="plus"></i>
             </button>
 
@@ -384,7 +387,7 @@ function renderItems() {
 
           <button
             class="qty-btn qty-delete"
-            onclick="event.stopPropagation();_cartDel('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'}, ${p.color ? `'${p.color}'` : 'null'})">
+            onclick="event.stopPropagation(); _cartDel('${p.id}', ${p.presentacion_id ? `'${p.presentacion_id}'` : 'null'})">
             <i data-lucide="trash-2"></i>
           </button>
         </div>
@@ -440,17 +443,15 @@ function renderItems() {
   // Volver a pintar iconos
   if (window.lucide) lucide.createIcons();
 }
-/* ================= ACCIONES ================= */
- window._cartPlus = (id, presId, color) => {
 
-  let carrito = getCarrito();
+/* ================= ACCIONES ================= */
+window._cartPlus = (id, presId) => {
+  const carrito = getCarrito();
 
   const p = carrito.find(i =>
     i.id === id &&
-    i.presentacion_id === (presId || null) &&
-    i.color === (color || null)
+    i.presentacion_id === (presId || null)
   );
-
   if (!p) return;
 
   p.cantidad++;
@@ -459,40 +460,36 @@ function renderItems() {
   guardar();
   renderItems();
   actualizarToggleEntrega();
-  };
-window._cartMinus = (id, presId, color) => {
+};
 
-      let carrito = getCarrito();
+window._cartMinus = (id, presId) => {
+  const carrito = getCarrito();
 
-      const index = carrito.findIndex(i =>
-        i.id === id &&
-        i.presentacion_id === (presId || null) &&
-        i.color === (color || null)
-      );
+  const index = carrito.findIndex(i =>
+    i.id === id &&
+    i.presentacion_id === (presId || null)
+  );
+  if (index === -1) return;
 
-      if (index === -1) return;
+  carrito[index].cantidad--;
 
-      carrito[index].cantidad--;
+  if (carrito[index].cantidad <= 0) {
+    carrito.splice(index, 1);
+  }
 
-      if (carrito[index].cantidad <= 0) {
-        carrito.splice(index, 1);
-      }
+  setCarrito(carrito);
+  guardar();
+  renderItems();
+  actualizarToggleEntrega();
+};
 
-      setCarrito(carrito);
-      guardar();
-      renderItems();
-      actualizarToggleEntrega();
-    };
-
-window._cartDel = (id, presId, color) => {
-
+window._cartDel = (id, presId) => {
   let carrito = getCarrito();
 
   carrito = carrito.filter(i =>
     !(
       i.id === id &&
-      i.presentacion_id === (presId || null) &&
-      i.color === (color || null)
+      i.presentacion_id === (presId || null)
     )
   );
 
@@ -500,14 +497,14 @@ window._cartDel = (id, presId, color) => {
   guardar();
   renderItems();
   actualizarToggleEntrega();
-  };
+};
 
-
- window._setEntrega = tipo => {
+window._setEntrega = tipo => {
   tipoEntrega = tipo;
   actualizarToggleEntrega();
   renderItems();
 };
+
 
 window._cerrarCarrito = () => {
   const overlay = document.getElementById("peekshop-cart-overlay");
@@ -516,8 +513,7 @@ window._cerrarCarrito = () => {
 };
 
 /* ================= DATOS CLIENTE ================= */
- function pedirDatosCliente(esCompraDirecta = false) {
-
+function pedirDatosCliente(esCompraDirecta = false) {
   const esEnvio = tipoEntrega === "envio";
 
   Swal.fire({
@@ -534,67 +530,191 @@ window._cerrarCarrito = () => {
       popup: "animate__animated animate__bounceIn"
     },
     html: `
-        <div class="swal-form">
+      <div class="swal-form">
 
-          <div class="swal-info-box">
-            <div class="swal-info-icon">🔒</div>
-            <div>
-              <strong>Información protegida</strong><br>
-              ${
-                esEnvio
-                  ? "Tus datos se utilizan para la entrega y confirmación del pedido."
-                  : "Tus datos se utilizan para identificar tu pedido en tienda."
-              }
-            </div>
+        <div class="swal-info-box">
+          <div class="swal-info-icon">🔒</div>
+          <div>
+            <strong>Información protegida</strong><br>
+            ${
+              esEnvio
+                ? "Tus datos se utilizan para la entrega y confirmación del pedido."
+                : "Tus datos se utilizan para identificar tu pedido en tienda."
+            }
           </div>
-
-          <input 
-            id="swal-nombre"
-            class="swal2-input swal-custom-input"
-            placeholder="Nombre completo">
-
-          ${
-            esEnvio
-              ? `
-                <textarea
-                  id="swal-direccion"
-                  class="swal2-textarea swal-custom-input"
-                  placeholder="Dirección completa"></textarea>
-
-                <textarea
-                  id="swal-referencia"
-                  class="swal2-textarea swal-custom-input"
-                  placeholder="Referencia (opcional)"></textarea>
-              `
-              : ""
-          }
-
         </div>
-      `,
 
-      didOpen: () => {
-        const popup = Swal.getPopup();
-        const textareas = popup.querySelectorAll("textarea");
+        <input 
+          id="swal-nombre"
+          class="swal2-input swal-custom-input"
+          placeholder="Nombre completo">
 
-        textareas.forEach(t => {
+        ${
+          esEnvio
+            ? `
+              <textarea
+                id="swal-direccion"
+                class="swal2-textarea swal-custom-input"
+                placeholder="Dirección completa"></textarea>
+
+              <textarea
+                id="swal-referencia"
+                class="swal2-textarea swal-custom-input"
+                placeholder="Referencia (opcional)"></textarea>
+
+              <!-- 📍 UBICACIÓN -->
+              <div style="
+                margin-top:10px;
+                padding:12px;
+                border:1px solid #e2e8f0;
+                border-radius:14px;
+                background:#f8fafc;
+              ">
+                <div style="font-size:13px;color:#334155;font-weight:700;margin-bottom:6px;">
+                  📍 Ubicación (opcional)
+                </div>
+
+                <button type="button" id="btnUbicacion"
+                  onclick="window.__psGetUbicacion && window.__psGetUbicacion(event)"
+                  style="
+                    width:100%;
+                    padding:10px 12px;
+                    border-radius:12px;
+                    border:none;
+                    font-weight:800;
+                    background:linear-gradient(135deg,#22c55e,#16a34a);
+                    color:white;
+                    cursor:pointer;
+                    pointer-events:auto;
+                  ">
+                  Compartir mi ubicación
+                </button>
+
+                <div id="ubicacionEstado" style="margin-top:8px;font-size:12px;color:#64748b;">
+                  Si compartes tu ubicación, nos ayuda a encontrar tu domicilio más rápido.
+                </div>
+
+                <input type="hidden" id="swal-lat" value="">
+                <input type="hidden" id="swal-lng" value="">
+                <input type="hidden" id="swal-maps" value="">
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+    `,
+
+    didOpen: () => {
+      const popup = Swal.getPopup();
+      const textareas = popup.querySelectorAll("textarea");
+
+      textareas.forEach(t => {
+        t.style.height = "auto";
+        t.style.overflow = "hidden";
+        t.addEventListener("input", () => {
           t.style.height = "auto";
-          t.style.overflow = "hidden";
-
-          t.addEventListener("input", () => {
-            t.style.height = "auto";
-            t.style.height = t.scrollHeight + "px";
-          });
+          t.style.height = t.scrollHeight + "px";
         });
-      },
-      
-    preConfirm: () => {
+      });
 
+      // 📍 Botón de ubicación (solo si es envío)    
+      if (esEnvio) {
+        const popup = Swal.getPopup();
+
+        // Definimos handler global temporal (seguro con SweetAlert + móvil)
+        window.__psGetUbicacion = (ev) => {
+          try {
+            ev?.preventDefault?.();
+            ev?.stopPropagation?.();
+
+            const btnUbic = popup?.querySelector("#btnUbicacion");
+            const estado = popup?.querySelector("#ubicacionEstado");
+            const latEl = popup?.querySelector("#swal-lat");
+            const lngEl = popup?.querySelector("#swal-lng");
+            const mapsEl = popup?.querySelector("#swal-maps");
+
+            if (!btnUbic || !estado || !latEl || !lngEl || !mapsEl) {
+              console.warn("No se encontraron elementos de ubicación dentro del Swal.");
+              return;
+            }
+
+            // ✅ feedback inmediato (si esto no cambia, es que NO está clickeando)
+            estado.textContent = "📍 Preparando ubicación...";
+
+            if (!window.isSecureContext) {
+              estado.textContent = "⚠️ La ubicación requiere HTTPS.";
+              return;
+            }
+
+            if (!navigator.geolocation) {
+              estado.textContent = "⚠️ Tu navegador no soporta ubicación.";
+              return;
+            }
+
+            btnUbic.disabled = true;
+            btnUbic.style.opacity = "0.85";
+            estado.textContent = "Obteniendo ubicación… (acepta el permiso del navegador)";
+
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+
+                const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+
+                latEl.value = String(lat);
+                lngEl.value = String(lng);
+                mapsEl.value = mapsUrl;
+
+                estado.innerHTML = `
+                  ✅ Ubicación guardada<br>
+                  <a href="${mapsUrl}" target="_blank" style="color:#16a34a;font-weight:800;text-decoration:underline;">
+                    Ver en Google Maps
+                  </a>
+                `;
+
+                btnUbic.textContent = "Ubicación lista ✅";
+                btnUbic.disabled = false;
+                btnUbic.style.opacity = "1";
+              },
+              (err) => {
+                let msg = "No se pudo obtener la ubicación.";
+                if (err?.code === 1) msg = "Permiso denegado. Activa ubicación en tu navegador.";
+                if (err?.code === 2) msg = "Ubicación no disponible. Activa GPS e inténtalo.";
+                if (err?.code === 3) msg = "Tiempo de espera. Intenta de nuevo.";
+
+                estado.textContent = `⚠️ ${msg}`;
+                btnUbic.disabled = false;
+                btnUbic.style.opacity = "1";
+                btnUbic.textContent = "Intentar de nuevo";
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 20000,
+                maximumAge: 0
+              }
+            );
+          } catch (e) {
+            console.error("Error ubicación:", e);
+          }
+        };
+      }   
+      
+    },
+
+    preConfirm: () => {
       const nombre = document.getElementById("swal-nombre").value.trim();
       const direccion = esEnvio
         ? document.getElementById("swal-direccion")?.value.trim()
         : "";
 
       const referencia = document.getElementById("swal-referencia")?.value.trim() || "";
+
+      // 📍 ubicación opcional
+      const lat = esEnvio ? (document.getElementById("swal-lat")?.value || "") : "";
+      const lng = esEnvio ? (document.getElementById("swal-lng")?.value || "") : "";
+      const maps = esEnvio ? (document.getElementById("swal-maps")?.value || "") : "";
 
       if (!nombre) {
         Swal.showValidationMessage("Ingresa tu nombre");
@@ -606,15 +726,13 @@ window._cerrarCarrito = () => {
         return false;
       }
 
-      return { nombre, direccion, referencia };
+      return { nombre, direccion, referencia, lat, lng, maps };
     }
-
   }).then(r => {
     if (r.isConfirmed) {
       mostrarResumenPedido(r.value, esCompraDirecta);
     }
   });
-
 }
 
 window.pedirDatosCliente = pedirDatosCliente;
@@ -625,12 +743,21 @@ function enviarWhats(cliente, numeroPedido, totales) {
     msg += `Pedido: ${numeroPedido}\n`;
     msg += `Cliente: ${cliente.nombre}\n`;
     
-    if (tipoEntrega === "envio") {
-      msg += `Entrega: Envío a domicilio\n`;
-      msg += `Dirección: ${cliente.direccion}\n`;
-    } else {
-      msg += `Entrega: Recoger en tienda\n`;
+  if (tipoEntrega === "envio") {
+    msg += `Entrega: Envío a domicilio\n`;
+    msg += `Dirección: ${cliente.direccion}\n`;
+
+    // ✅ agrega esto
+    if (cliente.referencia) {
+      msg += `Referencia: ${cliente.referencia}\n`;
     }
+
+    if (cliente.maps) {
+      msg += `Ubicación: ${cliente.maps}\n`;
+    }
+  } else {
+    msg += `Entrega: Recoger en tienda\n`;
+  }
     
     msg += `\n----------------------\n`;
     msg += `PRODUCTOS\n`;
@@ -639,9 +766,10 @@ function enviarWhats(cliente, numeroPedido, totales) {
     const productos = window._compraTemporal || getCarrito();
 
     productos.forEach(p => {
-      msg += `${p.nombre}\n`;
-      msg += `x${p.cantidad}  $${formatearPrecio(p.precio * p.cantidad)}\n\n`;
-    });
+  const presTxt = p.presentacion ? ` (${p.presentacion})` : "";
+  msg += `${p.nombre}${presTxt}\n`;
+  msg += `x${p.cantidad}  $${formatearPrecio(p.precio * p.cantidad)}\n\n`;
+});
     
     msg += `----------------------\n`;
     msg += `RESUMEN\n`;
@@ -848,8 +976,13 @@ guardar();
               <div style="font-weight:600;font-size:14px">
                 ${p.nombre}
               </div>
+
               <div style="font-size:13px;color:#64748b">
                 x${p.cantidad}
+              </div>
+
+              <div style="font-size:12px;color:#64748b">
+                ${p.presentacion ? `Presentación: <b>${p.presentacion}</b>` : ""}
               </div>
             </div>
 
@@ -905,12 +1038,19 @@ guardar();
 }
 
   
-  async function guardarPedidoSupabase({ numeroPedido, cliente, totales }) {
+async function guardarPedidoSupabase({ numeroPedido, cliente, totales }) {
+  const esEnvio = tipoEntrega === "envio";
 
   const { error } = await supabase.from("pedidos").insert({
     numero_pedido: numeroPedido,
     cliente_nombre: cliente.nombre,
-    cliente_direccion: cliente.direccion || "",
+    cliente_direccion: esEnvio ? (cliente.direccion || "") : "",
+    cliente_referencia: esEnvio ? (cliente.referencia || "") : "",
+
+    cliente_lat: esEnvio && cliente.lat ? Number(cliente.lat) : null,
+    cliente_lng: esEnvio && cliente.lng ? Number(cliente.lng) : null,
+    cliente_maps_url: esEnvio ? (cliente.maps || "") : "",
+
     tipo_entrega: tipoEntrega,
     subtotal: totales.subtotal,
     envio: totales.envio,
@@ -1021,10 +1161,10 @@ function cotizarEnvioMerida() {
 
   carrito.forEach(p => {
     msg += `${p.nombre}\n`;
-    msg += `x${p.cantidad}  $${p.precio * p.cantidad}\n\n`;
+    msg += `x${p.cantidad}  $${formatearPrecio(p.precio * p.cantidad)}\n\n`;
   });
 
-  msg += `Subtotal: $${subtotal}\n`;
+  msg += `Subtotal: $${formatearPrecio(subtotal)}\n`;
   msg += `Zona: ${zona}`;
 
   const numeroWhatsApp = "5219991494268";
@@ -1065,7 +1205,7 @@ function seleccionarTipoEntregaCompraDirecta() {
 
               <div class="ps-product">
                 <div class="ps-product-name">${producto.nombre}</div>
-                <div class="ps-product-sub">Subtotal: $${subtotal}</div>
+                <div class="ps-product-sub">Subtotal: $${formatearPrecio(subtotal)}</div>
               </div>
 
               <div class="ps-toggle">
@@ -1127,7 +1267,7 @@ function seleccionarTipoEntregaCompraDirecta() {
           }
 
           return {
-            texto: `Costo estimado de envío: $25<br><small>${mensajeHorario}</small>`,
+            texto: `Costo estimado de envío: $${formatearPrecio(25)}<br><small>${mensajeHorario}</small>`,
             envio: 25
           };
         }
@@ -1151,7 +1291,7 @@ function seleccionarTipoEntregaCompraDirecta() {
 
           costoBox.innerHTML = `
             ${envioInfo.texto}<br>
-            Total estimado: <strong>$${subtotal + envioInfo.envio}</strong>
+            Total estimado: <strong>$${formatearPrecio(subtotal + envioInfo.envio)}</strong>
           `;
         }
 
