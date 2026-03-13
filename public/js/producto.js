@@ -11,6 +11,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { abrirCarrito } from "./carrito.js";
 import { initUpsell } from "./upsell.js";
+import {
+  leerZonaCliente,
+  detectarZonaCliente,
+  construirLinkWhatsApp
+} from "./envio-caucel.js"; 
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -273,6 +278,7 @@ async function cargarProducto() {
     descripcion,
     precio,
     categoria,
+    tipo_mascota,
     activo,
     es_oferta,
     precio_anterior
@@ -559,42 +565,26 @@ setTimeout(() => {
   activarZoom();  
   activarBotones(p, imgs[0]); 
   cargarRelacionados(p.categoria, p.id);
-actualizarEnvio(
-  window._presentacionSeleccionada?.precio || ctx.p.precio
-);
+ await detectarZonaCliente();
+ initUpsell(p);
 
+// esperar a que exista la variante seleccionada
 setTimeout(() => {
-  initUpsell(p);
-}, 0);
+
+  const precioActual =
+    window._presentacionSeleccionada?.precio ||
+    window._productoActual?.precio ||
+    0;
+
+  actualizarEnvio(precioActual);
+
+}, 50);
 
 
 // 🔥 ACTIVAR ADMIN (UNA SOLA VEZ)
 if (window.ES_ADMIN && typeof window.initAdminProducto === "function") {
   window.initAdminProducto();
 }
-
-setTimeout(() => {
-
-  const selectZona = document.getElementById("zonaEnvio");
-  if (!selectZona) return;
-
-  // 🔹 Cargar zona guardada
-  const zonaGuardada = localStorage.getItem("zona_envio");
-  if (zonaGuardada) {
-    selectZona.value = zonaGuardada;
-  }
-
-  // 🔹 Evento cambio
-  selectZona.addEventListener("change", e => {
-    localStorage.setItem("zona_envio", e.target.value);
-
-    const precioActual =
-      window._presentacionSeleccionada?.precio || p.precio;
-
-    actualizarEnvio(precioActual);
-  });
-
-}, 0);
 
 }
 
@@ -809,6 +799,43 @@ const producto = {
 
     // 🟩 COMPRA DIRECTA
     if (btnComprar) {
+      const zonaCliente = leerZonaCliente();
+
+if (zonaCliente?.ok && zonaCliente?.calculo && !zonaCliente.calculo.dentroZona) {
+
+  const pres = window._presentacionSeleccionada;
+
+  const nombrePresentacion =
+    (obtenerNombreVariante(pres) || pres?.nombre || pres?.talla || "").trim();
+
+  const link = construirLinkWhatsApp({
+    producto: `${p.nombre} ${nombrePresentacion}`,
+    precio: pres?.precio ?? p.precio,
+    zona: zonaCliente.calculo.zona,
+    distancia: zonaCliente.calculo.distancia?.toFixed(2),
+    lat: zonaCliente.lat,
+    lng: zonaCliente.lng
+  });
+
+  Swal.fire({
+    icon: "info",
+    title: "Zona fuera de entrega automática",
+    html: `
+      Tu ubicación está fuera de la zona automática de envío.<br><br>
+      Debes cotizar el envío por WhatsApp.
+    `,
+    confirmButtonText: "Cotizar por WhatsApp",
+    confirmButtonColor: "#16a34a"
+  }).then((r) => {
+    if (r.isConfirmed) {
+      window.open(link, "_blank");
+    }
+  });
+
+  return;
+}
+
+
 
         const pres = window._presentacionSeleccionada;
 
@@ -1132,39 +1159,42 @@ function renderComponente(b, ctx) {
 
      
  /* ================= ENVIO================= */
-case "envio":
+    case "envio":
 
-  return `
-    <div id="bloqueEnvio"
-        class="rounded-xl bg-gray-50 border p-4 text-sm transition space-y-3">
+      return `
+        <div id="bloqueEnvio"
+            class="rounded-xl bg-gray-50 border p-4 text-sm transition space-y-3">
 
-      <div>
-        <select id="zonaEnvio"
-          class="w-full border rounded-lg p-2 text-xs">
-          <option value="Caucel">Ciudad Caucel</option>
-          <option value="Merida">Mérida (otra colonia)</option>
-        </select>
-      </div>
+          <div class="text-xs text-gray-500">
+            La zona de entrega se calcula automáticamente según tu ubicación.
+          </div>
 
-      <div class="flex items-center gap-2">
-        <span id="iconoEnvio">📦</span>
-        <span id="textoEnvio" class="font-medium text-gray-700">
-          Calculando envío...
-        </span>
-      </div>
+          <div class="flex items-center gap-2">
+            <span id="iconoEnvio">📦</span>
+            <span id="textoEnvio" class="font-medium text-gray-700">
+              Calculando envío...
+            </span>
+          </div>
 
-      <div id="barraEnvioWrap" class="hidden">
-        <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-          <div id="barraEnvio"
-              class="h-full bg-green-500 transition-all duration-500"
-              style="width:0%"></div>
+          <div class="text-xs">
+            <button id="btnRecalcularZona"
+              class="text-blue-600 hover:underline">
+              Actualizar ubicación
+            </button>
+          </div>
+
+          <div id="barraEnvioWrap" class="hidden">
+            <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+              <div id="barraEnvio"
+                  class="h-full bg-green-500 transition-all duration-500"
+                  style="width:0%"></div>
+            </div>
+            <div id="mensajeEnvioExtra"
+                class="text-xs mt-1 text-gray-600"></div>
+          </div>
+
         </div>
-        <div id="mensajeEnvioExtra"
-            class="text-xs mt-1 text-gray-600"></div>
-      </div>
-
-    </div>
-  `;
+      `;
           /* ================= VARIANTES ================= */
  case "variant": {
 
@@ -1333,6 +1363,7 @@ case "buttons": {
 
 
 function actualizarEnvio(precio) {
+    precio = Number(precio) || 0;
 
   const texto = document.getElementById("textoEnvio");
   const icono = document.getElementById("iconoEnvio");
@@ -1343,7 +1374,26 @@ function actualizarEnvio(precio) {
 
   if (!texto || !icono || !bloque) return;
 
-  const zona = localStorage.getItem("zona_envio") || "Caucel";
+  const zonaCliente = leerZonaCliente();
+
+    if (!zonaCliente || !zonaCliente.calculo) {
+
+      icono.textContent = "📍";
+
+      texto.innerHTML = `
+        <span class="text-gray-600">
+          No se pudo detectar tu ubicación
+        </span>
+
+        <div class="text-xs text-gray-500 mt-1">
+          Pulsa "Actualizar ubicación"
+        </div>
+      `;
+
+      return;
+    }
+
+const calculo = zonaCliente.calculo;
 
   // 🔄 RESET VISUAL
   bloque.classList.remove("envio-gratis", "envio-animar");
@@ -1351,132 +1401,146 @@ function actualizarEnvio(precio) {
   bloque.classList.add("bg-gray-50");
 
   // ================= CAUCEL =================
-  if (zona === "Caucel") {
+if (calculo.dentroZona) {
 
-    const metaGratis = 400;
+  const metaGratis = 400;
+  const costoEnvio = calculo.envio ?? 0;
 
-    if (precio >= metaGratis) {
+  icono.textContent = "🛵";
 
-      icono.textContent = "🛵";
+  /* ================= SI LA ZONA YA ES GRATIS ================= */
 
-      texto.innerHTML = `
-        <span class="text-green-700 font-semibold">
-          Envío GRATIS en Ciudad Caucel
-        </span>
-        <div class="text-xs text-gray-600">
-          Recíbelo hoy mismo
+  if (costoEnvio === 0) {
+
+    texto.innerHTML = `
+      <span class="text-green-700 font-semibold">
+        Envío GRATIS en tu zona
+      </span>
+      <div class="text-xs text-gray-600">
+        Entrega rápida en Ciudad Caucel
+      </div>
+    `;
+
+    bloque.classList.add("bg-green-50", "border-green-500");
+
+    if (barraWrap) barraWrap.classList.add("hidden");
+    if (mensajeExtra) mensajeExtra.innerHTML = "";
+
+    return;
+  }
+
+  /* ================= ENVÍO NORMAL ================= */
+
+  texto.innerHTML = `
+  <div class="space-y-1">
+
+    <div class="text-xs text-gray-500">
+      Zona detectada: ${calculo.zona}
+    </div>
+
+    <div class="font-semibold text-gray-800">
+      Envío $${formatearPrecio(costoEnvio)}
+    </div>
+
+  </div>
+  `;
+
+  /* ================= ENVÍO GRATIS POR COMPRA ================= */
+
+  if (precio >= metaGratis) {
+
+    texto.innerHTML = `
+      <span class="text-green-700 font-semibold">
+        Envío GRATIS en Ciudad Caucel
+      </span>
+      <div class="text-xs text-gray-600">
+        Recíbelo hoy mismo
+      </div>
+    `;
+
+    bloque.classList.add("bg-green-50", "border-green-500");
+    bloque.classList.add("envio-animar");
+
+    if (barraWrap) barraWrap.classList.add("hidden");
+    if (mensajeExtra) mensajeExtra.innerHTML = "";
+
+  } else {
+
+    const faltan = metaGratis - precio;
+    const progreso = Math.min((precio / metaGratis) * 100, 100);
+
+    if (barraWrap) barraWrap.classList.remove("hidden");
+
+    if (barra) {
+      barra.style.transition = "width 0.4s ease";
+      barra.style.width = progreso + "%";
+    }
+
+    /* ================= MENSAJE HORARIO ================= */
+
+    const ahora = new Date();
+    const hora = ahora.getHours();
+
+    const horaApertura = 9;
+    const horaCierre = 21;
+
+    let mensajeHorario = "";
+
+    if (hora >= horaApertura && hora < horaCierre) {
+
+      mensajeHorario = `
+        <div class="mt-2 px-3 py-2 rounded-lg
+                    bg-green-100 text-green-800
+                    text-xs font-semibold
+                    flex items-center gap-2">
+          
+          <i data-lucide="truck" class="w-4 h-4"></i>
+          Entrega estimada: Hoy antes de las 9 PM
         </div>
       `;
 
-      // 🎉 Estilo visual premium
-      bloque.classList.add("bg-green-50", "border-green-500");
+    } else if (hora < horaApertura) {
 
-      // 🎬 Animación suave
-      bloque.classList.add("envio-animar");
-
-      // ocultar barra
-      if (barraWrap) barraWrap.classList.add("hidden");
-
-      // limpiar mensaje
-      if (mensajeExtra) mensajeExtra.innerHTML = "";
+      mensajeHorario = `
+        <div class="mt-2 px-3 py-2 rounded-lg
+                    bg-amber-100 text-amber-800
+                    text-xs font-semibold
+                    flex items-center gap-2">
+          
+          <i data-lucide="clock" class="w-4 h-4"></i>
+          Entrega estimada: Hoy a partir de las 9 AM
+        </div>
+      `;
 
     } else {
 
-      const faltan = metaGratis - precio;
-      const progreso = Math.min((precio / metaGratis) * 100, 100);
-
-      icono.textContent = "🛵";
-
-      texto.innerHTML = `
-        <span class="font-semibold text-gray-800">
-          Envío $25 en Ciudad Caucel
-        </span>
+      mensajeHorario = `
+        <div class="mt-2 px-3 py-2 rounded-lg
+                    bg-red-100 text-red-700
+                    text-xs font-semibold
+                    flex items-center gap-2">
+          
+          <i data-lucide="moon" class="w-4 h-4"></i>
+          Entrega estimada: Mañana a partir de las 9 AM
+        </div>
       `;
-
-      // mostrar barra
-      if (barraWrap) barraWrap.classList.remove("hidden");
-
-      // animación suave de progreso
-      if (barra) {
-        barra.style.transition = "width 0.4s ease";
-        barra.style.width = progreso + "%";
-      }
-
-      if (mensajeExtra) {
-
-      const ahora = new Date();
-        const hora = ahora.getHours();
-
-        const horaApertura = 9;
-        const horaCierre = 21;
-
-        let mensajeHorario = "";
-
-        
-        if (hora >= horaApertura && hora < horaCierre) {
-
-          mensajeHorario = `
-            <div class="mt-2 px-3 py-2 rounded-lg
-                        bg-green-100 text-green-800
-                        text-xs font-semibold
-                        flex items-center gap-2">
-              
-              <i data-lucide="truck" class="w-4 h-4"></i>
-              Entrega estimada: Hoy antes de las 9 PM
-            </div>
-          `;
-
-        }
-
-       
-        else if (hora < horaApertura) {
-
-          mensajeHorario = `
-            <div class="mt-2 px-3 py-2 rounded-lg
-                        bg-amber-100 text-amber-800
-                        text-xs font-semibold
-                        flex items-center gap-2">
-              
-              <i data-lucide="clock" class="w-4 h-4"></i>
-              Entrega estimada: Hoy a partir de las 9 AM
-            </div>
-          `;
-
-        }
-
-        
-        else {
-
-          mensajeHorario = `
-            <div class="mt-2 px-3 py-2 rounded-lg
-                        bg-red-100 text-red-700
-                        text-xs font-semibold
-                        flex items-center gap-2">
-              
-              <i data-lucide="moon" class="w-4 h-4"></i>
-              Entrega estimada: Mañana a partir de las 9 AM
-            </div>
-          `;
-
-        }
-
-        mensajeExtra.innerHTML = `
-          Te faltan 
-          <strong class="text-green-600">$${formatearPrecio(faltan)}</strong>
-          para envío gratis
-          ${mensajeHorario}
-        `;
-
-        
-        if (window.lucide) {
-          lucide.createIcons();
-        }
-
-      }
-
     }
 
+    if (mensajeExtra) {
+
+      mensajeExtra.innerHTML = `
+        Te faltan 
+        <strong class="text-green-600">$${formatearPrecio(faltan)}</strong>
+        para envío gratis
+        ${mensajeHorario}
+      `;
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
   }
+}
 
   // ================= MÉRIDA =================
  else {
@@ -1491,13 +1555,18 @@ function actualizarEnvio(precio) {
 
   const precioActual = presentacion?.precio || precio;
 
-  const mensaje = `
-Hola, quiero cotizar envío para:
-${nombreProducto} ${nombrePresentacion}
+    const zonaCliente = leerZonaCliente();
 
-Precio: $${precioActual}
-Zona: Mérida (fuera de Caucel)
-  `.trim();
+    const mensaje = `
+    Hola, quiero cotizar envío para:
+
+    ${nombreProducto} ${nombrePresentacion}
+
+    Precio: $${precioActual}
+
+    Ubicación:
+    https://www.google.com/maps?q=${zonaCliente?.lat},${zonaCliente?.lng}
+    `.trim();
 
   const mensajeEncoded = encodeURIComponent(mensaje);
 
@@ -1548,6 +1617,100 @@ Zona: Mérida (fuera de Caucel)
     bloque.classList.remove("envio-animar");
   }, 400);
 }
+
+    /* =========================================
+      RECALCULAR UBICACIÓN
+    ========================================= */
+
+   document.addEventListener("click", async e => {
+
+  const btn = e.target.closest("#btnRecalcularZona");
+  if (!btn) return;
+
+  const texto = document.getElementById("textoEnvio");
+  const icono = document.getElementById("iconoEnvio");
+
+  // evitar múltiples clics
+  btn.disabled = true;
+
+  // 🔄 Estado cargando
+  if (icono) {
+    icono.innerHTML = `
+      <svg class="w-4 h-4 animate-spin text-blue-600"
+        fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10"
+          stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z">
+        </path>
+      </svg>
+    `;
+  }
+
+  if (texto) {
+    texto.innerHTML = `
+      <span class="text-gray-700 font-medium">
+        Detectando ubicación...
+      </span>
+      <div class="text-xs text-gray-500 mt-1">
+        Esto puede tardar unos segundos
+      </div>
+    `;
+  }
+
+  try {
+
+    await detectarZonaCliente();
+
+    const precio =
+      window._presentacionSeleccionada?.precio ||
+      window._productoActual?.precio ||
+      0;
+
+    // ✔️ confirmación visual
+    if (icono) icono.textContent = "✅";
+
+    if (texto) {
+      texto.innerHTML = `
+        <span class="text-green-700 font-semibold">
+          Ubicación actualizada
+        </span>
+        <div class="text-xs text-gray-500 mt-1">
+          Calculando envío...
+        </div>
+      `;
+    }
+
+    setTimeout(() => {
+      actualizarEnvio(precio);
+    }, 600);
+
+  } catch (error) {
+
+    console.error("Error detectando ubicación:", error);
+
+    if (icono) icono.textContent = "⚠️";
+
+    if (texto) {
+      texto.innerHTML = `
+        <span class="text-red-600 font-semibold">
+          No se pudo detectar tu ubicación
+        </span>
+        <div class="text-xs text-gray-500 mt-1">
+          Intenta nuevamente
+        </div>
+      `;
+    }
+
+  } finally {
+
+    // desbloquear botón
+    btn.disabled = false;
+
+  }
+
+});
 
     function activarCarrusel() {
       // Ya no usamos carrusel scroll.
@@ -1934,7 +2097,12 @@ if (nombreEls.length) {
 
   /* ===== ENVÍO ===== */
 
-  actualizarEnvio(variante.precio);
+  const precioActual =
+  variante?.precio_oferta && variante?.en_oferta
+    ? variante.precio_oferta
+    : variante?.precio || window._productoActual?.precio;
+
+actualizarEnvio(precioActual);
 
   /* ===== DESCRIPCIÓN ===== */
 

@@ -1,4 +1,9 @@
+import { detectarZonaCliente, leerZonaCliente } from "./envio-caucel.js";
 document.addEventListener("DOMContentLoaded", () => {
+
+  detectarZonaCliente();
+
+  
 
   lucide.createIcons();
 
@@ -127,6 +132,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     lucide.createIcons();
+    
+
   }
 
   actualizarEstadoHorario();
@@ -317,12 +324,17 @@ function mostrarHorario() {
 
 }
 
-
-/* =====================================================
-   FUNCIÓN ENVÍOS
-===================================================== */
-
 function mostrarEnvios() {
+
+  const zona = leerZonaCliente();
+
+  let mensajeZona = "No se pudo detectar tu zona.";
+
+  if (zona?.calculo?.dentroZona) {
+    mensajeZona = "🚚 Detectamos que estás dentro de la zona de entrega en Ciudad Caucel";
+  } else {
+    mensajeZona = "📲 Tu zona requiere cotización de envío por WhatsApp";
+  }
 
   Swal.fire({
     title: "Información de Envíos",
@@ -330,27 +342,48 @@ function mostrarEnvios() {
     confirmButtonText: "Entendido",
     confirmButtonColor: "#111827",
     background: "#ffffff",
-    customClass: {
-      popup: "rounded-3xl shadow-2xl"
-    },
     html: `
       <div class="text-left text-sm text-gray-700 space-y-6">
 
         <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+
           <div class="font-semibold mb-2 flex items-center gap-2">
             <i data-lucide="truck" class="w-4 h-4"></i>
-            Ciudad Caucel
+            Envíos en Ciudad Caucel
           </div>
-          Envío GRATIS en compras mayores a <strong>$400</strong><br>
-          Menor a $400 → <strong>$25</strong>
+
+          ${mensajeZona}
+
+          <div class="mt-2 text-xs text-gray-600">
+            • Zona express → <strong>GRATIS</strong><br>
+            • Zona cercana → <strong>GRATIS</strong><br>
+            • Zona media → <strong>$15</strong><br>
+            • Zona lejana → <strong>$25</strong>
+          </div>
+
         </div>
 
         <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+
+          <div class="font-semibold mb-2 flex items-center gap-2">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+            Cálculo automático
+          </div>
+
+          Cuando realizas tu pedido puedes compartir tu ubicación
+          para calcular el costo exacto de envío.
+
+        </div>
+
+        <div class="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+
           <div class="font-semibold mb-2 flex items-center gap-2">
             <i data-lucide="message-circle" class="w-4 h-4"></i>
-            Otros fraccionamientos
+            Fuera de Ciudad Caucel
           </div>
-          Se cotiza por WhatsApp
+
+          Los envíos a otras zonas de Mérida se cotizan por WhatsApp.
+
         </div>
 
       </div>
@@ -362,12 +395,5 @@ function mostrarEnvios() {
 
 }
 
- document.addEventListener("click", (e) => {
-
-  if (e.target.closest(".btn-ubicacion")) {
-    window.open("https://maps.app.goo.gl/r5SchUKfgtPcyReb7", "_blank");
-  }
-
 });
 
-});

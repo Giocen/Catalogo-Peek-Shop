@@ -7,17 +7,40 @@
       "**/node_modules/**"
     ],
     "headers": [
+
+      {
+        "source": "**/*.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+
+      {
+        "source": "**/*.css",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+
       {
         "source": "**",
         "headers": [
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://www.gstatic.com https://www.googleapis.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; connect-src 'self' https://*.supabase.co https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://cdn.jsdelivr.net https://*.cloudfunctions.net; img-src 'self' data: blob: https://*.supabase.co https://www.gstatic.com; media-src 'self' blob: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+            "value": "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://www.gstatic.com https://www.googleapis.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; connect-src 'self' https://*.supabase.co https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://cdn.jsdelivr.net https://*.cloudfunctions.net https://ipapi.co; img-src 'self' data: blob: https://*.supabase.co https://www.gstatic.com; media-src 'self' blob: https://*.supabase.co; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
           }
         ]
       }
+
     ]
   },
+
   "functions": [
     {
       "source": "functions",

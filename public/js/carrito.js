@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { calcularEnvioCaucel } from "./envio-caucel.js";
 
 
 function getCarrito() {
@@ -9,12 +10,9 @@ function setCarrito(data) {
   localStorage.setItem("carrito", JSON.stringify(data));
 }
 
-/* ===== CONFIG ENVÍO  ===== */
-const COSTO_ENVIO = 25;
-const ENVIO_GRATIS_DESDE = 400;
+
 
 window.tipoEntrega = "envio"; // envio | tienda
-let envioGratisActivo = false;
 
 function celebrarEnvioGratis() {
 
@@ -90,6 +88,7 @@ export function abrirCarrito() {
     return;
   }
   renderPortal();
+  setTimeout(renderItems, 50);
   
 }
 
@@ -146,32 +145,7 @@ function renderPortal() {
   const subtotal = carrito.reduce((a, p) =>
     a + Number(p.precio) * Number(p.cantidad), 0);
 
-  const faltan = ENVIO_GRATIS_DESDE - subtotal;
-  const zona = localStorage.getItem("zona_envio") || "Caucel";
-
-  const metaGratis = ENVIO_GRATIS_DESDE;
-
-  const progreso =
-    zona === "Caucel"
-      ? Math.min((subtotal / metaGratis) * 100, 100)
-      : 0;  
-    // 🎉 Detectar cuando se desbloquea envío gratis
-        if (zona === "Caucel" && subtotal >= metaGratis && !envioGratisActivo) {
-        envioGratisActivo = true;
-        setTimeout(() => celebrarEnvioGratis(), 250);
-      }
   
-    if (zona !== "Caucel" || subtotal < metaGratis) {
-      envioGratisActivo = false;
-    }
-  const colorBarra =
-  progreso >= 100
-    ? "linear-gradient(90deg,#facc15,#f59e0b)"  // Dorado al 100%
-    : "linear-gradient(90deg,#22c55e,#16a34a)";
-    const glowBarra =
-      progreso >= 100
-        ? "0 0 10px rgba(250,204,21,.8), 0 0 20px rgba(245,158,11,.6)"
-        : "none";
 
         portal.innerHTML = `
         <div class="cart-panel">
@@ -204,40 +178,41 @@ function renderPortal() {
             </button>
           </div>
 
-          <!-- BADGE ENVÍO -->
-          ${
-            zona === "Caucel"
-              ? (
-                  subtotal >= 400
-                    ? `
-                      <div class="shipping-success">
-                        🚚 ¡Envío GRATIS desbloqueado!
-                      </div>
-                    `
-                    : `
-                      <div class="shipping-progress">
-                        <div class="shipping-text">
-                          Te faltan <strong>$${formatearPrecio(faltan > 0 ? faltan : 0)}</strong>
-                          para envío gratis
-                        </div>
-                        <div class="progress-bar">
-                          <div class="progress-fill"
-                            style="
-                              width:${progreso}%;
-                              background:${colorBarra};
-                              box-shadow:${glowBarra};
-                            ">
-                          </div>
-                        </div>
-                      </div>
-                    `
-                )
-              : `
-                <div class="shipping-warning">
-                  📲 El envío en Mérida se cotiza por WhatsApp
-                </div>
-              `
-          }
+         <!-- BADGE ENVÍO -->
+          <div id="shippingBadge" style="
+            padding:12px 14px;
+            margin:12px 16px 6px 16px;
+            border-radius:14px;
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
+            font-size:13px;
+            line-height:1.4;
+          ">
+
+            <div style="font-weight:700;color:#0f172a">
+              🚚 Envíos en Ciudad Caucel
+            </div>
+
+            <div style="color:#64748b;margin-top:2px">
+              Costo calculado según tu ubicación
+            </div>
+
+            <button id="btnUbicacionCart"
+              style="
+                margin-top:8px;
+                padding:6px 10px;
+                border-radius:8px;
+                border:none;
+                background:#22c55e;
+                color:white;
+                font-size:12px;
+                font-weight:700;
+                cursor:pointer;
+              ">
+              📍 Compartir ubicación
+            </button>
+
+          </div>
 
           <!-- ENTREGA -->
           <div class="delivery-toggle">
@@ -267,16 +242,28 @@ function renderPortal() {
 
           <!-- FOOTER -->
           <div class="cart-footer">
-            <div id="cartTotal" class="cart-total"></div>
 
-            <button id="btnEnviar" class="checkout-btn">
-              ${
-                zona === "Caucel"
-                  ? "Finalizar pedido"
-                  : "Cotizar envío por WhatsApp"
-              }
-            </button>
-          </div>
+          <div id="cartTotal" class="cart-total"></div>
+
+          <button
+            onclick="pedirDatosCliente()"
+            style="
+              margin-top:10px;
+              width:100%;
+              padding:14px;
+              border:none;
+              border-radius:14px;
+              font-weight:800;
+              font-size:15px;
+              background:linear-gradient(135deg,#22c55e,#16a34a);
+              color:white;
+              cursor:pointer;
+              box-shadow:0 6px 16px rgba(0,0,0,.15);
+            ">
+            Finalizar pedido 🚀
+          </button>
+
+        </div>
 
           </div>
 
@@ -295,28 +282,137 @@ function renderPortal() {
 
       `;
 
-  const btn = document.getElementById("btnEnviar");
+      const latGuardada = localStorage.getItem("cliente_lat");
+      const lngGuardada = localStorage.getItem("cliente_lng");
 
-  if (zona === "Caucel") {
-    btn.onclick = () => {
-      window._cerrarCarrito();
-      setTimeout(() => {
-        pedirDatosCliente();
-      }, 200);
-    };
-  } else {
-    btn.onclick = cotizarEnvioMerida;
-  }
-  renderItems();
-  animarContador(Math.floor(progreso));
-  if (window.lucide) lucide.createIcons();
+      const badge = document.getElementById("shippingBadge");
+
+      if (latGuardada && lngGuardada && badge) {
+
+    const envioData = calcularEnvioCaucel(
+      Number(latGuardada),
+      Number(lngGuardada)
+    );
+
+      if (envioData.tipo === "cotizar_whatsapp") {
+
+    badge.innerHTML = `
+    <div style="font-weight:700;color:#0f172a">
+    📍 Tu zona: Mérida
+    </div>
+
+    <div style="font-size:12px;color:#64748b;margin-top:4px">
+    📲 Envío se cotiza por WhatsApp
+    </div>
+    `;
+
+    }
+
+    if (envioData.tipo === "cotizar_whatsapp") {
+
+        badge.innerHTML = `
+          <div style="font-weight:700;color:#0f172a">
+            📍 Fuera de zona automática
+          </div>
+
+          <button onclick="cotizarEnvioMerida()"
+            style="
+              margin-top:6px;
+              padding:6px 10px;
+              border:none;
+              border-radius:8px;
+              background:#22c55e;
+              color:white;
+              font-weight:700;
+              font-size:12px;
+            ">
+            Cotizar envío por WhatsApp
+          </button>
+        `;
+      }
+
+    else {
+
+      badge.innerHTML = `
+        <div style="font-weight:700;color:#0f172a">
+          📍 Envío a tu zona: ${
+            envioData.envio === 0
+              ? "Gratis 🚚"
+              : "$" + formatearPrecio(envioData.envio)
+          }
+        </div>
+
+        <div style="font-size:12px;color:#64748b;margin-top:4px">
+          Entrega estimada: Hoy mismo 🚀
+        </div>
+      `;
+
+    }
 }
 
+    const btnUbicacionCart = document.getElementById("btnUbicacionCart");
+    if (window.lucide) lucide.createIcons();
+
+    if (btnUbicacionCart) {
+
+      btnUbicacionCart.onclick = () => {
+
+        if (!navigator.geolocation) {
+          alert("Tu navegador no soporta ubicación");
+          return;
+        }
+
+        btnUbicacionCart.textContent = "Obteniendo ubicación...";
+
+        navigator.geolocation.getCurrentPosition(pos => {
+
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          localStorage.setItem("cliente_lat", lat);
+          localStorage.setItem("cliente_lng", lng);
+
+          renderPortal();
+          setTimeout(renderItems, 50);
+
+          const envioData = calcularEnvioCaucel(Number(lat), Number(lng));
+
+          const badge = document.getElementById("shippingBadge");
+
+          if (!badge) return;
+
+          badge.innerHTML = `
+            <div style="font-weight:700;color:#0f172a">
+              📍 Envío a tu zona: ${
+                envioData.envio === 0
+                  ? "Gratis 🚚"
+                  : "$" + formatearPrecio(envioData.envio)
+              }
+            </div>
+
+            <div style="font-size:12px;color:#64748b;margin-top:4px">
+              Entrega estimada: Hoy mismo 🚀
+            </div>
+          `;
+
+          renderItems();
+
+        }, () => {
+
+          btnUbicacionCart.textContent = "Intentar de nuevo";
+
+        });
+
+      };
+
+    }
+
+  }
 /* ================= ITEMS + TOTAL ================= */
 function renderItems() {
 
   const carrito = getCarrito();
-
+  
   const body = document.getElementById("cartBody");
   const totalEl = document.getElementById("cartTotal");
 
@@ -398,19 +494,25 @@ function renderItems() {
   }).join("");
 
   // ================= CALCULAR ENVÍO =================
-  const zona = localStorage.getItem("zona_envio") || "Caucel";
+ 
+    let envio = 0;
 
-  let envio = 0;
+    if (tipoEntrega === "envio") {
 
-  if (tipoEntrega === "tienda") {
-    envio = 0;
-  }
-  else if (zona === "Caucel") {
-    envio = subtotal >= 400 ? 0 : 25;
-  }
-  else {
-    envio = 0; // Mérida → se cotiza manual
-  }
+      const lat = Number(localStorage.getItem("cliente_lat"));
+      const lng = Number(localStorage.getItem("cliente_lng"));
+
+      if (lat && lng) {
+        const envioData = calcularEnvioCaucel(lat, lng);
+
+        if (envioData?.tipo === "cotizar_whatsapp") {
+          envio = 0;
+        } else {
+          envio = envioData?.envio ?? 0;
+        }
+      }
+
+    }
 
   const totalFinal = subtotal + envio;
 
@@ -421,18 +523,18 @@ function renderItems() {
       <span>$${formatearPrecio(subtotal)}</span>
     </div>
 
-    <div class="cart-summary-row">
-      <span>Envío</span>
-      <span>
-        ${
-          tipoEntrega === "tienda"
+   <div class="cart-summary-row">
+    <span>Envío</span>
+    <span>
+      ${
+        tipoEntrega === "tienda"
+          ? "Gratis"
+          : envio === 0
             ? "Gratis"
-            : zona === "Caucel"
-              ? (envio === 0 ? "Gratis" : `$${formatearPrecio(envio)}`)
-              : "Cotizar por WhatsApp"
-        }
-      </span>
-    </div>
+            : `$${formatearPrecio(envio)}`
+      }
+    </span>
+  </div>
 
     <div class="cart-summary-total">
       <span>Total</span>
@@ -665,6 +767,8 @@ function pedirDatosCliente(esCompraDirecta = false) {
 
                 latEl.value = String(lat);
                 lngEl.value = String(lng);
+                localStorage.setItem("cliente_lat", lat);
+                localStorage.setItem("cliente_lng", lng);
                 mapsEl.value = mapsUrl;
 
                 estado.innerHTML = `
@@ -909,16 +1013,26 @@ guardar();
     subtotal += Number(p.precio) * Number(p.cantidad);
   });
 
-  const zona = localStorage.getItem("zona_envio") || "Caucel";
+ 
 
   let envio = 0;
 
   if (tipoEntrega === "tienda") {
     envio = 0;
   }
-  else if (zona === "Caucel") {
-    envio = subtotal >= 400 ? 0 : 25;
+  else {
+
+  const lat = Number(localStorage.getItem("cliente_lat"));
+  const lng = Number(localStorage.getItem("cliente_lng"));
+
+  if (!lat || !lng) {
+    envio = 0;
+  } else {
+    const envioData = calcularEnvioCaucel(lat, lng);
+    envio = envioData?.envio ?? 0;
   }
+
+}
 
   return {
     subtotal,
@@ -1183,7 +1297,7 @@ function seleccionarTipoEntregaCompraDirecta() {
   if (!producto) return;
 
   const subtotal = Number(producto.precio) * Number(producto.cantidad);
-  const zona = localStorage.getItem("zona_envio") || "Caucel";
+  
 
   Swal.fire({
     width: 430,
@@ -1252,23 +1366,32 @@ function seleccionarTipoEntregaCompraDirecta() {
             };
           }
 
-          if (zona !== "Caucel") {
+         const lat = Number(localStorage.getItem("cliente_lat"));
+          const lng = Number(localStorage.getItem("cliente_lng"));
+
+          if (!lat || !lng) {
+            return {
+              texto: `Comparte tu ubicación para calcular el envío 📍<br><small>${mensajeHorario}</small>`,
+              envio: 0
+            };
+          }
+
+          const envioData = calcularEnvioCaucel(lat, lng);
+
+          if (!envioData || envioData.tipo === "cotizar_whatsapp") {
             return {
               texto: `Envío se cotiza por WhatsApp 📲<br><small>${mensajeHorario}</small>`,
               envio: 0
             };
           }
 
-          if (subtotal >= 400) {
-            return {
-              texto: `🚚 Envío GRATIS desbloqueado<br><small>${mensajeHorario}</small>`,
-              envio: 0
-            };
-          }
-
           return {
-            texto: `Costo estimado de envío: $${formatearPrecio(25)}<br><small>${mensajeHorario}</small>`,
-            envio: 25
+            texto: `Costo estimado de envío: ${
+              envioData.envio === 0
+                ? "Gratis 🚚"
+                : `$${formatearPrecio(envioData.envio)}`
+            }<br><small>${mensajeHorario}</small>`,
+            envio: envioData.envio
           };
         }
 

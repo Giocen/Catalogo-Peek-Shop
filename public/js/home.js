@@ -120,7 +120,7 @@ if (zona === "superior") {
                             flex items-center justify-center">
 
                   <img 
-                    src="${b.url}?width=1000&quality=95&format=webp"
+                    src="${b.url}?width=600&quality=75&format=webp"
                     class="w-full h-full
                           object-contain
                           transition-transform duration-500 ease-out
@@ -281,7 +281,6 @@ let productosCache = [];
 let paginaActual = 1;
 const productosPorPagina = 20;
 let productosFiltradosGlobal = [];
-
 let esMovil = window.innerWidth < 768;
 
 window.addEventListener("resize", () => {
@@ -343,23 +342,26 @@ function aplicarFiltrosGlobales() {
 
   let resultado = productosCache.filter(p => {
 
-    if (filtrosActivos.categoria &&
-        p.categoria !== filtrosActivos.categoria)
+    if (
+      filtrosActivos.categoria &&
+      p.categoria !== filtrosActivos.categoria
+    )
       return false;
 
     if (
-        filtrosActivos.mascota &&
-        p.tipo_mascota?.toLowerCase() !== filtrosActivos.mascota.toLowerCase()
-      )
-        return false;
+      filtrosActivos.mascota &&
+      p.tipo_mascota?.toLowerCase() !== filtrosActivos.mascota.toLowerCase()
+    )
+      return false;
 
+  
     if (
-        filtrosActivos.marca.length > 0 &&
-        !filtrosActivos.marca.includes(
-          p.marca?.toLowerCase()
-        )
+      filtrosActivos.marca.length > 0 &&
+      !filtrosActivos.marca.includes(
+        (p.marca || "").toLowerCase().trim()
       )
-        return false;
+    )
+      return false;
 
     if (filtrosActivos.soloOfertas) {
 
@@ -371,6 +373,7 @@ function aplicarFiltrosGlobales() {
     }
 
     if (filtrosActivos.busqueda) {
+
       const texto = `
         ${p.nombre || ""}
         ${p.marca || ""}
@@ -381,12 +384,16 @@ function aplicarFiltrosGlobales() {
         return false;
     }
 
-    if (filtrosActivos.precioMin !== null &&
-    Number(p.precio) < filtrosActivos.precioMin)
+    if (
+      filtrosActivos.precioMin !== null &&
+      Number(p.precio) < filtrosActivos.precioMin
+    )
       return false;
 
-    if (filtrosActivos.precioMax !== null &&
-        Number(p.precio) > filtrosActivos.precioMax)
+    if (
+      filtrosActivos.precioMax !== null &&
+      Number(p.precio) > filtrosActivos.precioMax
+    )
       return false;
 
     return true;
@@ -394,9 +401,9 @@ function aplicarFiltrosGlobales() {
 
   const url = new URL(window.location);
 
-    Object.entries(filtrosActivos).forEach(([key, value]) => {
+  Object.entries(filtrosActivos).forEach(([key, value]) => {
 
-      if (
+    if (
       value === null ||
       value === "" ||
       (Array.isArray(value) && value.length === 0) ||
@@ -410,9 +417,9 @@ function aplicarFiltrosGlobales() {
       );
     }
 
-});
+  });
 
-window.history.replaceState({}, "", url);
+  window.history.replaceState({}, "", url);
 
   productosFiltradosGlobal = resultado;
   paginaActual = 1;

@@ -220,6 +220,7 @@ function buildCandidateOrs(actual, ctx) {
  * @param {object} p Producto actual
  */
 export async function initUpsell(p) {
+
   const box = document.getElementById("upsellBox");
   if (!box || !p?.id) return;
 
@@ -232,71 +233,110 @@ export async function initUpsell(p) {
     keywords: regla.keywords || [],
   };
 
-  // Traemos más de 10 para poder rankear bien
+  /* ================= QUERY INTELIGENTE ================= */
+
   const orQuery = buildCandidateOrs(p, ctx);
 
-  // OJO: aquí agregué descripcion y tipo_mascota al select para rankear mejor
-  const { data: candidatos, error } = await supabase
+  let { data: candidatos, error } = await supabase
     .from("catalogo_productos")
-    .select("id,nombre,precio,categoria,activo,descripcion,tipo_mascota")
+    .select(`
+      id,
+      nombre,
+      precio,
+      categoria,
+      descripcion,
+      tipo_mascota,
+      activo
+    `)
+    
     .eq("activo", true)
     .neq("id", p.id)
     .or(orQuery)
-    .limit(40);
+    .limit(40)
 
   if (error) {
     console.warn("upsell error", error);
+    return;
+  }
+
+  /* ================= FALLBACK ================= */
+
+  if (!candidatos || candidatos.length < 4) {
+
+    const { data: fallback } = await supabase
+      .from("catalogo_productos")
+      .select("id,nombre,precio,categoria,descripcion,tipo_mascota")
+      .eq("activo", true)
+      .neq("id", p.id)
+      .ilike("categoria", `%${p.categoria || ""}%`)
+      .limit(20);
+
+    candidatos = fallback || [];
+  }
+
+  if (!candidatos.length) {
     box.innerHTML = "";
     return;
   }
 
-  if (!candidatos?.length) {
-    box.innerHTML = "";
-    return;
-  }
+  /* ================= SCORING ================= */
 
-  // Rankeo y filtro final (esto es lo que hace que recomiende “bien”)
   const ranked = candidatos
-    .map((cand) => ({ cand, s: scoreCandidate(p, cand, ctx) }))
-    .filter((x) => x.s > 5) // umbral para evitar basura
-    .sort((a, b) => b.s - a.s)
-    .map((x) => x.cand);
+    .map(c => ({
+      cand: c,
+      s: scoreCandidate(p, c, ctx)
+    }))
+    .filter(x => x.s > 5)
+    .sort((a,b)=>b.s-a.s)
+    .map(x=>x.cand);
 
   if (!ranked.length) {
     box.innerHTML = "";
     return;
   }
 
-  // Render: en PC 4 items, en móvil 6
-  const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-  const maxItems = isDesktop ? 4 : 6;
-  const productos = ranked.slice(0, maxItems);
+  /* ================= LIMIT ================= */
 
-  const ids = productos.map((x) => x.id);
+  const isDesktop = window.matchMedia("(min-width:768px)").matches;
+  const maxItems = isDesktop ? 4 : 6;
+
+  const productos = ranked.slice(0,maxItems);
+
+  const ids = productos.map(p=>p.id);
+
+  /* ================= MULTIMEDIA ================= */
 
   const { data: media } = await supabase
     .from("catalogo_multimedia")
     .select("producto_id,url,orden")
     .in("producto_id", ids);
 
+  /* ================= PRESENTACIONES ================= */
+
   const { data: pres } = await supabase
     .from("catalogo_presentaciones")
     .select("id,producto_id,precio,activo,nombre,talla,color,imagen")
     .in("producto_id", ids)
     .eq("activo", true)
-    .order("precio", { ascending: true });
+    .order("precio", { ascending:true });
 
-  const presByProd = new Map();
-  (pres || []).forEach((v) => {
-    if (!presByProd.has(v.producto_id)) presByProd.set(v.producto_id, v);
+  const presMap = new Map();
+
+  (pres || []).forEach(v=>{
+    if(!presMap.has(v.producto_id))
+      presMap.set(v.producto_id,v);
   });
 
-  const items = productos.map((prod) => {
-    const img = (media || [])
-      .filter((m) => m.producto_id === prod.id)
-      .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))[0]?.url;
+  /* ================= RENDER ================= */
 
-    const v = presByProd.get(prod.id) || null;
+  const items = productos.map(prod=>{
+
+    const img = media
+      ?.filter(m=>m.producto_id===prod.id)
+      ?.sort((a,b)=>(a.orden??0)-(b.orden??0))[0]?.url;
+
+    const v = presMap.get(prod.id);
+
     const precio = v?.precio ?? prod.precio;
 
     const payload = {
@@ -306,106 +346,88 @@ export async function initUpsell(p) {
       precio: precio,
       imagen: v?.imagen || img || "/img/placeholder.png",
       presentacion: (v?.nombre || v?.talla || "").trim() || null,
-      cantidad: 1,
+      cantidad:1
     };
 
     return `
-      <div
-        class="
-          upsell-item
-          bg-white border rounded-2xl shadow-sm
-          p-3
-          flex gap-3
-          min-w-[260px] md:min-w-0
-          snap-start
-          hover:shadow-md transition
-        ">
+      <div class="bg-white border rounded-xl p-3 flex gap-3 hover:shadow-md transition">
+
         <a href="/producto.html?id=${prod.id}" class="shrink-0">
-          <div class="w-14 h-14 md:w-12 md:h-12 rounded-xl bg-gray-50 border flex items-center justify-center overflow-hidden">
-            <img src="${optimizarImg(v?.imagen || img)}" class="w-full h-full object-contain">
+          <div class="w-14 h-14 rounded-lg bg-gray-50 border flex items-center justify-center overflow-hidden">
+            <img src="${optimizarImg(v?.imagen || img)}"
+                 class="w-full h-full object-contain">
           </div>
         </a>
 
-        <div class="min-w-0 flex-1">
+        <div class="flex-1 min-w-0">
+
           <a href="/producto.html?id=${prod.id}"
-             class="block text-[13px] md:text-xs font-semibold text-gray-900 leading-snug line-clamp-2 hover:underline">
+            class="block text-sm font-semibold line-clamp-2 hover:underline">
             ${prod.nombre}
           </a>
 
-          <div class="mt-1 font-extrabold text-green-700 text-sm md:text-[13px]">
+          <div class="text-green-700 font-bold text-sm mt-1">
             $${formatearPrecio(precio)}
           </div>
 
           <button
-            class="
-              mt-2 w-full
-              bg-black hover:bg-neutral-900 text-white
-              py-2 rounded-xl
-              text-xs font-semibold
-              transition active:scale-[.99]
-              flex items-center justify-center gap-2
-            "
+            class="mt-2 w-full bg-black text-white py-2 rounded-lg text-xs"
             data-upsell-add="1"
             data-prod="${encodeProd(payload)}">
-            <span class="text-base leading-none">＋</span>
-            Agregar
+
+            + Agregar
           </button>
+
         </div>
+
       </div>
     `;
   });
 
   box.innerHTML = `
-    <div class="rounded-2xl border bg-white p-4">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="inline-flex w-7 h-7 rounded-xl bg-yellow-100 text-yellow-700 items-center justify-center">
-            ✨
-          </span>
-          <div class="min-w-0">
-            <div class="font-extrabold text-gray-900 leading-tight">
-              ${regla.titulo || "Recomendado para ti"}
-            </div>
-            <div class="text-xs text-gray-500">
-              Sugerencias que sí combinan con tu compra
-            </div>
-          </div>
+    <div class="rounded-xl border bg-white p-4">
+
+      <div class="flex items-center gap-2 mb-3">
+
+        <div class="w-7 h-7 flex items-center justify-center
+                    rounded-lg bg-yellow-100 text-yellow-700">
+          ✨
         </div>
 
-        <a href="/?categoria=${encodeURIComponent(p.categoria || "")}"
-           class="hidden md:inline-flex text-xs font-semibold text-blue-600 hover:underline">
-          Ver más
-        </a>
+        <div class="font-bold">
+          ${regla.titulo || "Recomendado para ti"}
+        </div>
+
       </div>
 
-      <div
-        class="
-          mt-3
-          flex md:grid
-          md:grid-cols-2
-          gap-3
-          overflow-x-auto md:overflow-visible
-          snap-x snap-mandatory
-          pb-1
-        "
-        style="-webkit-overflow-scrolling: touch;"
-      >
+      <div class="grid md:grid-cols-2 gap-3">
         ${items.join("")}
       </div>
 
-      <div class="mt-3 md:hidden text-[11px] text-gray-500">
-        Desliza para ver más sugerencias →
-      </div>
     </div>
   `;
 
-  // Click “Agregar”
-  box.querySelectorAll("[data-upsell-add]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const raw = btn.getAttribute("data-prod") || "";
+  /* ================= EVENTOS ================= */
+
+  box.querySelectorAll("[data-upsell-add]").forEach(btn=>{
+
+    btn.addEventListener("click",()=>{
+
+      const raw = btn.getAttribute("data-prod");
       const producto = decodeProd(raw);
-      if (!producto) return;
+
+      if(!producto) return;
+
       agregarAlCarrito(producto);
+
+      btn.classList.add("animate-pulse");
+
+      setTimeout(()=>{
+        btn.classList.remove("animate-pulse");
+      },400);
+
     });
+
   });
+
 }
